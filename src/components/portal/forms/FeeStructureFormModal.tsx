@@ -5,7 +5,9 @@ import { X, Loader2, Plus } from "lucide-react";
 import { createFeeStructure } from "@/app/actions/finance-actions";
 import toast from "react-hot-toast";
 
-export default function FeeStructureFormModal({ classes }: any) {
+import type { ClassOption } from "@/lib/form-types";
+
+export default function FeeStructureFormModal({ classes }: { classes: ClassOption[] }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -60,7 +62,11 @@ export default function FeeStructureFormModal({ classes }: any) {
                 <label className="form-label-caps">Assign to class</label>
                 <select name="classId" className="form-select">
                   <option value="">Apply to specific student later</option>
-                  {classes.map((c: any) => <option key={c.id} value={c.id}>{c.grade} {c.section}</option>)}
+                  {classes.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.grade} {c.section}
+                    </option>
+                  ))}
                 </select>
                 <p className="text-xs text-white/30 mt-1">If a class is selected, this fee applies to all students in that class.</p>
               </div>

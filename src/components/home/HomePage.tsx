@@ -1,8 +1,9 @@
 "use client";
 
+import { type CSSProperties } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import {
   Heart,
   ArrowRight,
@@ -12,18 +13,20 @@ import {
   TrendingUp,
   BookOpen,
   ChevronRight,
+  Quote,
+  Calculator,
+  Sparkles,
 } from "lucide-react";
+import { focusAreas } from "@/data/programs";
+import { getFadeUp, getStagger } from "@/lib/motion";
+import StorytellingGallery from "@/components/media/StorytellingGallery";
+import { getAcademyPhoto } from "@/data/academy-photos";
 
 type HomeStats = {
   students: number;
   teachers: number;
   subjects: number;
   totalDonated: number;
-};
-
-const fade = {
-  hidden: { opacity: 0, y: 20 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.23, 1, 0.32, 1] } },
 };
 
 const features = [
@@ -49,23 +52,7 @@ const features = [
   },
 ];
 
-const programs = [
-  {
-    grade: "Grade 6",
-    summary: "Core foundations in maths, sciences, languages, and digital literacy.",
-    subjects: 6,
-  },
-  {
-    grade: "Grade 7",
-    summary: "Deeper subject work with more analysis, writing, and lab-style learning.",
-    subjects: 6,
-  },
-  {
-    grade: "Grade 8",
-    summary: "Board-ready preparation with advanced concepts across the curriculum.",
-    subjects: 6,
-  },
-];
+const focusIcons = [Calculator, BookOpen, Sparkles];
 
 const testimonials = [
   {
@@ -84,7 +71,7 @@ const testimonials = [
     quote:
       "My son's confidence and grades have improved dramatically. The teachers truly care.",
     name: "Parent of Hassan",
-    role: "Grade 7 family",
+    role: "Parent",
   },
 ];
 
@@ -94,7 +81,44 @@ function formatPKR(amount: number) {
   return String(amount);
 }
 
+function SectionHeader({
+  eyebrow,
+  title,
+  description,
+  align = "left",
+  id,
+}: {
+  eyebrow?: string;
+  title: string;
+  description?: string;
+  align?: "left" | "center";
+  id?: string;
+}) {
+  const wrapClass =
+    align === "center"
+      ? "section-header--center max-w-2xl w-full"
+      : "max-w-2xl w-full text-left";
+
+  return (
+    <div className={wrapClass}>
+      {eyebrow && <span className="section-eyebrow">{eyebrow}</span>}
+      <h2
+        id={id}
+        className="text-2xl md:text-3xl lg:text-[2rem] font-bold text-white font-display tracking-tight leading-tight w-full"
+      >
+        {title}
+      </h2>
+      {description && (
+        <p className="mt-4 md:mt-5 text-base text-white/55 leading-relaxed max-w-xl w-full">
+          {description}
+        </p>
+      )}
+    </div>
+  );
+}
+
 export default function HomePage({ stats }: { stats?: HomeStats }) {
+  const reduceMotion = useReducedMotion();
   const data = stats ?? { students: 30, teachers: 3, subjects: 18, totalDonated: 900000 };
 
   const impactStats = [
@@ -105,212 +129,372 @@ export default function HomePage({ stats }: { stats?: HomeStats }) {
     { value: `PKR ${formatPKR(data.totalDonated)}`, label: "Total raised", accent: "#F78C1F" },
   ];
 
+  const fadeUp = getFadeUp(reduceMotion, 24);
+  const stagger = getStagger(reduceMotion, 0.08, 0.05);
+  const heroPhoto = getAcademyPhoto("teacher-instruction");
+
+  const viewport = { once: true, margin: "-80px" as const };
+
   return (
-    <main className="bg-[#0A0E1A]">
+    <main className="home-page overflow-x-hidden">
       {/* Hero */}
-      <section className="relative min-h-[88vh] flex items-center overflow-hidden">
-        <div className="absolute inset-0 bg-[#0A0E1A]" />
+      <section className="home-hero bg-slate-900" aria-labelledby="home-hero-heading">
+        {heroPhoto && (
+          <div className="home-hero__banner" aria-hidden>
+            <Image
+              src={heroPhoto.src}
+              alt=""
+              fill
+              priority
+              quality={90}
+              sizes="100vw"
+              className="home-hero__banner-img"
+              style={{ objectPosition: "72% 38%" }}
+            />
+            <div className="home-hero__banner-scrim" />
+          </div>
+        )}
         <div
-          className="absolute inset-0"
-          style={{
-            background:
-              "radial-gradient(ellipse 80% 50% at 20% 30%, rgba(5,51,92,0.45) 0%, transparent 60%)",
-          }}
+          className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent z-10"
+          aria-hidden
         />
 
-        <div className="container-main relative z-10 py-28 md:py-32">
-          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-            <motion.div initial="hidden" animate="show" variants={{ show: { transition: { staggerChildren: 0.08 } } }}>
-              <motion.p variants={fade} className="text-xs font-semibold uppercase tracking-[0.2em] text-[#F78C1F] mb-6">
+        <div className="container-main home-hero__inner relative z-10">
+          <div className="home-hero__content flex flex-col justify-center">
+              <p className="hero-eyebrow text-xs sm:text-sm tracking-widest text-orange-400/80">
                 Sukkur · Sindh · Pakistan
-              </motion.p>
+              </p>
 
-              <motion.h1
-                variants={fade}
-                className="text-4xl sm:text-5xl lg:text-[3.25rem] font-bold text-white leading-[1.1] tracking-tight font-display max-w-xl"
+              <h1
+                id="home-hero-heading"
+                className="hero-headline text-[2rem] sm:text-4xl lg:text-[3.125rem] font-bold text-white leading-[1.12] tracking-tight font-display mb-6"
               >
-                Quality education for students who deserve more.
-              </motion.h1>
+                Quality education for students who deserve&nbsp;more.
+              </h1>
 
-              <motion.p variants={fade} className="mt-6 text-lg text-white/50 leading-relaxed max-w-lg">
-                RiseUp Preps Academy is a not-for-profit school building futures through rigorous academics,
-                mentorship, and community support.
-              </motion.p>
+              <p className="hero-subtitle">
+                RiseUp Preps Academy is a not-for-profit school building futures through rigorous
+                academics, mentorship, and community support.
+              </p>
 
-              <motion.div variants={fade} className="mt-10 flex flex-col sm:flex-row gap-3">
-                <Link href="/donate" className="btn btn-primary min-h-[48px] px-8 text-base">
-                  <Heart className="w-5 h-5" />
+              <div className="home-hero__actions flex flex-col sm:flex-row sm:flex-wrap gap-4 sm:gap-5 sm:items-center">
+                <Link
+                  href="/donate"
+                  className="btn btn-primary min-h-[44px] px-8 text-base w-full sm:w-auto"
+                >
+                  <Heart className="w-5 h-5 shrink-0" aria-hidden />
                   Sponsor a student
                 </Link>
-                <Link href="/about" className="btn btn-secondary min-h-[48px] px-8 text-base">
-                  Our story
-                  <ArrowRight className="w-4 h-4" />
+                <Link href="/about" className="hero-story-link group">
+                  <span>Our story</span>
+                  <ArrowRight
+                    className="w-4 h-4 shrink-0 transition-transform group-hover:translate-x-0.5"
+                    aria-hidden
+                  />
                 </Link>
-              </motion.div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, scale: 0.96 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.6, delay: 0.15 }}
-              className="hidden lg:flex justify-center"
-            >
-              <div className="relative">
-                <div className="absolute inset-0 rounded-full bg-[#F78C1F]/10 blur-3xl scale-110" />
-                <Image
-                  src="/images/logo.png"
-                  alt="RiseUp Preps Academy"
-                  width={420}
-                  height={420}
-                  priority
-                  className="relative w-full max-w-[340px] h-auto drop-shadow-[0_24px_80px_rgba(0,0,0,0.5)]"
-                />
               </div>
-            </motion.div>
+
+              <ul className="hero-trust-bar" aria-label="Academy at a glance">
+                <li className="hero-trust-bar__item">
+                  <span className="hero-trust-bar__value">{data.students}+</span>
+                  <span className="hero-trust-bar__label">Students</span>
+                </li>
+                <li className="hero-trust-bar__divider" aria-hidden />
+                <li className="hero-trust-bar__item">
+                  <span className="hero-trust-bar__value">{data.teachers}</span>
+                  <span className="hero-trust-bar__label">Teachers</span>
+                </li>
+                <li className="hero-trust-bar__divider" aria-hidden />
+                <li className="hero-trust-bar__item">
+                  <span className="hero-trust-bar__value">2025</span>
+                  <span className="hero-trust-bar__label">Founded</span>
+                </li>
+              </ul>
           </div>
         </div>
       </section>
 
-      {/* Impact — single clean stats row */}
-      <section className="border-y border-white/[0.06] bg-[#070B14]">
-        <div className="container-main py-14 md:py-16">
-          <div className="text-center mb-10 md:mb-12">
-            <h2 className="text-2xl md:text-3xl font-bold text-white font-display">Our impact at a glance</h2>
-            <p className="mt-3 text-sm text-white/40 max-w-md mx-auto">
-              Real numbers from our academy — updated as students grow and community support continues.
-            </p>
-          </div>
+      {/* Impact */}
+      <section className="border-y border-white/[0.06] bg-[#0B1220]" aria-labelledby="impact-heading">
+        <div className="container-main section-padding">
+          <motion.div
+            initial="hidden"
+            whileInView="show"
+            viewport={viewport}
+            variants={fadeUp}
+            className="flex justify-center section-header-block w-full"
+          >
+            <SectionHeader
+              id="impact-heading"
+              eyebrow="Our impact"
+              title="Impact at a glance"
+              description="Real numbers from our academy — updated as students grow and community support continues."
+              align="center"
+            />
+          </motion.div>
 
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-8 lg:gap-0 lg:divide-x lg:divide-white/[0.06]">
-            {impactStats.map((stat, i) => (
-              <div key={i} className="text-center lg:px-6 first:lg:pl-0 last:lg:pr-0">
+          <motion.ul
+            initial="hidden"
+            whileInView="show"
+            viewport={viewport}
+            variants={stagger}
+            className="grid grid-cols-1 min-[420px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-5 md:gap-6"
+          >
+            {impactStats.map((stat) => (
+              <motion.li
+                key={stat.label}
+                variants={fadeUp}
+                className="landing-card landing-card--stat h-full w-full"
+              >
                 <p
-                  className="text-3xl md:text-4xl font-bold font-mono tracking-tight"
+                  className="text-2xl sm:text-3xl lg:text-4xl font-bold font-mono tracking-tight tabular-nums text-center w-full px-1"
                   style={{ color: stat.accent }}
                 >
                   {stat.value}
                 </p>
-                <p className="mt-2 text-xs font-medium uppercase tracking-wider text-white/40">
+                <p className="text-[0.6875rem] sm:text-xs font-medium uppercase tracking-wider text-white/50 leading-relaxed text-center w-full px-2 sm:px-3">
                   {stat.label}
                 </p>
-              </div>
+              </motion.li>
             ))}
-          </div>
+          </motion.ul>
+        </div>
+      </section>
+
+      {/* Campus life */}
+      <section
+        className="section-padding border-b border-white/[0.06] bg-[#070B14]/60"
+        aria-labelledby="campus-life-heading"
+      >
+        <div className="container-main section-centered">
+          <motion.div
+            initial="hidden"
+            whileInView="show"
+            viewport={viewport}
+            variants={fadeUp}
+            className="flex justify-center section-header-block w-full mb-10 md:mb-12"
+          >
+            <SectionHeader
+              id="campus-life-heading"
+              eyebrow="Real classrooms"
+              title="Where your support shows up"
+              description="These are our students and teachers — not stock photography. Every gift helps keep moments like these happening every day."
+              align="center"
+            />
+          </motion.div>
+          <motion.div initial="hidden" whileInView="show" viewport={viewport} variants={fadeUp}>
+            <StorytellingGallery
+              photoIds={["teacher-instruction", "students-writing", "outdoor-study"]}
+            />
+          </motion.div>
         </div>
       </section>
 
       {/* Why RiseUp */}
-      <section className="py-20 md:py-24">
+      <section className="section-padding" aria-labelledby="why-heading">
         <div className="container-main">
-          <div className="max-w-2xl mb-12 md:mb-16">
-            <h2 className="text-2xl md:text-3xl font-bold text-white font-display">Why families choose RiseUp</h2>
-            <p className="mt-3 text-white/50 leading-relaxed">
-              We combine structure, care, and community so every child can learn with confidence.
-            </p>
-          </div>
+          <motion.div
+            initial="hidden"
+            whileInView="show"
+            viewport={viewport}
+            variants={fadeUp}
+            className="flex justify-center section-header-block w-full"
+          >
+            <SectionHeader
+              id="why-heading"
+              eyebrow="Why RiseUp"
+              title="Why families choose us"
+              description="We combine structure, care, and community so every child can learn with confidence."
+              align="center"
+            />
+          </motion.div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            {features.map((f, i) => (
-              <div
-                key={i}
-                className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-6 hover:border-white/[0.12] transition-colors"
+          <motion.div
+            initial="hidden"
+            whileInView="show"
+            viewport={viewport}
+            variants={stagger}
+            className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 md:gap-6"
+          >
+            {features.map((f) => {
+              const Icon = f.icon;
+              return (
+              <motion.article
+                key={f.title}
+                variants={fadeUp}
+                className="landing-card landing-card--center flex flex-col items-center h-full text-center"
               >
-                <div className="w-11 h-11 rounded-xl bg-[#F78C1F]/10 flex items-center justify-center mb-5">
-                  <f.icon className="w-5 h-5 text-[#F78C1F]" />
+                <div className="landing-card__icon" aria-hidden>
+                  <Icon className="w-[1.375rem] h-[1.375rem] text-[#F78C1F]" strokeWidth={2} />
                 </div>
-                <h3 className="text-base font-semibold text-white mb-2">{f.title}</h3>
-                <p className="text-sm text-white/45 leading-relaxed">{f.description}</p>
-              </div>
-            ))}
-          </div>
+                <h3 className="mt-6 text-base font-semibold text-white mb-3 tracking-tight">
+                  {f.title}
+                </h3>
+                <p className="text-sm text-white/55 leading-relaxed">{f.description}</p>
+              </motion.article>
+            );
+            })}
+          </motion.div>
         </div>
       </section>
 
       {/* Programs */}
-      <section className="py-20 md:py-24 border-t border-white/[0.06] bg-[#0D1B2A]/50">
-        <div className="container-main">
-          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-12">
-            <div>
-              <h2 className="text-2xl md:text-3xl font-bold text-white font-display">Academic programs</h2>
-              <p className="mt-3 text-white/50 max-w-lg">Grades 6–8 with a full core curriculum and dedicated teachers.</p>
-            </div>
-            <Link
-              href="/programs"
-              className="inline-flex items-center gap-1 text-sm font-semibold text-[#F78C1F] hover:text-[#E07B0E] transition-colors shrink-0"
-            >
+      <section
+        className="section-padding border-t border-white/[0.06] bg-[#0D1B2A]/40"
+        aria-labelledby="programs-heading"
+      >
+        <div className="container-main section-centered">
+          <motion.div
+            initial="hidden"
+            whileInView="show"
+            viewport={viewport}
+            variants={fadeUp}
+            className="section-centered__header section-header-block flex flex-col items-center"
+          >
+            <SectionHeader
+              id="programs-heading"
+              eyebrow="Academics"
+              title="Three pillars of learning"
+              description="Mathematics and English, plus digital fluency and responsible AI skills — open to students across grades."
+              align="center"
+            />
+            <Link href="/programs" className="landing-link mt-6">
               View all programs
-              <ChevronRight className="w-4 h-4" />
+              <ChevronRight className="w-4 h-4" aria-hidden />
             </Link>
-          </div>
+          </motion.div>
 
-          <div className="grid md:grid-cols-3 gap-5">
-            {programs.map((p, i) => (
-              <div
-                key={i}
-                className="rounded-2xl border border-white/[0.08] bg-gradient-to-br from-white/[0.04] to-transparent p-6 flex flex-col"
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-xl font-bold text-white">{p.grade}</h3>
-                  <span className="text-xs text-white/40 font-medium">{p.subjects} subjects</span>
-                </div>
-                <p className="text-sm text-white/45 leading-relaxed flex-1">{p.summary}</p>
-                <Link
-                  href="/programs"
-                  className="mt-6 inline-flex items-center gap-1 text-sm font-medium text-[#F78C1F] hover:gap-2 transition-all"
+          <motion.div
+            initial="hidden"
+            whileInView="show"
+            viewport={viewport}
+            variants={stagger}
+            className="programs-pillars w-full max-w-5xl mx-auto"
+          >
+            {focusAreas.map((area, i) => {
+              const Icon = focusIcons[i];
+              return (
+                <motion.article
+                  key={area.id}
+                  variants={fadeUp}
+                  className="landing-card programs-pillar flex flex-col h-full"
+                  style={{ "--pillar-accent": area.accent } as CSSProperties}
                 >
-                  Learn more <ChevronRight className="w-4 h-4" />
-                </Link>
-              </div>
-            ))}
-          </div>
+                  <div
+                    className="programs-pillar__icon"
+                    style={{ borderColor: `${area.accent}40`, background: `${area.accent}14` }}
+                  >
+                    <Icon
+                      className="w-6 h-6"
+                      style={{ color: area.accent, stroke: area.accent }}
+                      strokeWidth={2}
+                      aria-hidden
+                    />
+                  </div>
+                  <p className="programs-pillar__tagline" style={{ color: area.accent }}>
+                    {area.tagline}
+                  </p>
+                  <h3 className="text-xl font-bold text-white tracking-tight mb-3">{area.title}</h3>
+                  <p className="text-sm text-white/55 leading-relaxed flex-1">{area.description}</p>
+                  <Link href="/programs" className="landing-link mt-8">
+                    Learn more
+                    <ChevronRight className="w-4 h-4" aria-hidden />
+                  </Link>
+                </motion.article>
+              );
+            })}
+          </motion.div>
         </div>
       </section>
 
       {/* Testimonials */}
-      <section className="py-20 md:py-24">
+      <section className="section-padding" aria-labelledby="testimonials-heading">
         <div className="container-main">
-          <h2 className="text-2xl md:text-3xl font-bold text-white font-display text-center mb-12">
-            From our community
-          </h2>
+          <motion.div
+            initial="hidden"
+            whileInView="show"
+            viewport={viewport}
+            variants={fadeUp}
+            className="flex justify-center section-header-block w-full"
+          >
+            <SectionHeader
+              id="testimonials-heading"
+              eyebrow="Community"
+              title="From our community"
+              description="Voices from donors, teachers, and families who believe in our mission."
+              align="center"
+            />
+          </motion.div>
 
-          <div className="grid md:grid-cols-3 gap-5">
-            {testimonials.map((t, i) => (
-              <blockquote
-                key={i}
-                className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-6 flex flex-col"
+          <motion.div
+            initial="hidden"
+            whileInView="show"
+            viewport={viewport}
+            variants={stagger}
+            className="grid md:grid-cols-3 gap-5 md:gap-6"
+          >
+            {testimonials.map((t) => (
+              <motion.blockquote
+                key={t.name}
+                variants={fadeUp}
+                className="landing-card landing-card--center flex flex-col items-center h-full"
               >
-                <p className="text-sm text-white/60 leading-relaxed italic flex-1">&ldquo;{t.quote}&rdquo;</p>
-                <footer className="mt-6 pt-6 border-t border-white/[0.06]">
+                <Quote className="w-8 h-8 text-[#F78C1F]/30 mb-6 shrink-0" aria-hidden />
+                <p className="text-sm text-white/65 leading-relaxed flex-1">
+                  &ldquo;{t.quote}&rdquo;
+                </p>
+                <footer className="mt-10 pt-7 border-t border-white/[0.08] w-full text-center">
                   <p className="text-sm font-semibold text-white">{t.name}</p>
-                  <p className="text-xs text-white/35 mt-0.5">{t.role}</p>
+                  <p className="text-xs text-white/45 mt-2">{t.role}</p>
                 </footer>
-              </blockquote>
+              </motion.blockquote>
             ))}
-          </div>
+          </motion.div>
         </div>
       </section>
 
       {/* CTA */}
-      <section className="py-20 md:py-28 border-t border-white/[0.06]">
-        <div className="container-main">
-          <div className="rounded-3xl border border-[#F78C1F]/20 bg-gradient-to-br from-[#F78C1F]/10 via-[#0D1B2A] to-[#0A0E1A] px-8 py-12 md:px-16 md:py-16 text-center max-w-3xl mx-auto">
-            <BookOpen className="w-10 h-10 text-[#F78C1F] mx-auto mb-6 opacity-80" />
-            <h2 className="text-2xl md:text-4xl font-bold text-white font-display leading-tight">
-              PKR 2,500 sponsors one month of school for a child.
-            </h2>
-            <p className="mt-4 text-white/50 text-sm md:text-base leading-relaxed max-w-md mx-auto">
-              Your gift covers tuition, supplies, and the daily support that keeps students in class.
-            </p>
-            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
-              <Link href="/donate" className="btn btn-primary min-h-[48px] px-10 w-full sm:w-auto">
-                <Heart className="w-5 h-5" />
-                Donate now
-              </Link>
-              <Link href="/admissions" className="btn btn-secondary min-h-[48px] px-10 w-full sm:w-auto">
-                Apply for admission
-              </Link>
+      <section className="section-padding border-t border-white/[0.06] pb-20 md:pb-28">
+        <div className="container-main section-centered">
+          <motion.div
+            initial="hidden"
+            whileInView="show"
+            viewport={viewport}
+            variants={fadeUp}
+            className="section-centered__cta landing-cta-card relative overflow-hidden rounded-3xl border border-[#F78C1F]/25 bg-gradient-to-br from-[#F78C1F]/12 via-[#0D1B2A] to-[#0A0E1A] text-center"
+          >
+            <div
+              className="absolute inset-0 opacity-40 pointer-events-none"
+              style={{
+                background:
+                  "radial-gradient(circle at 50% 0%, rgba(247,140,31,0.2) 0%, transparent 55%)",
+              }}
+              aria-hidden
+            />
+            <div className="relative flex flex-col items-center w-full mx-auto">
+              <div className="flex flex-col items-center w-full gap-5 md:gap-6">
+                <div className="landing-card__icon landing-card__icon--lg border-white/15 bg-white/[0.06]" aria-hidden>
+                  <BookOpen className="text-white/80" strokeWidth={2} />
+                </div>
+                <h2 className="w-full text-2xl sm:text-3xl md:text-[2rem] font-bold text-white font-display leading-tight tracking-tight text-center px-2">
+                  PKR 2,500 sponsors one month of school for a child.
+                </h2>
+                <p className="w-full max-w-lg text-white/55 text-sm sm:text-base leading-relaxed text-center px-3 sm:px-4">
+                  Your gift covers tuition, supplies, and the daily support that keeps students in
+                  class.
+                </p>
+              </div>
+              <div className="landing-cta-actions flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-4 w-full max-w-md">
+                <Link href="/donate" className="btn btn-primary min-h-[44px] px-10 w-full sm:w-auto">
+                  <Heart className="w-5 h-5" aria-hidden />
+                  Donate now
+                </Link>
+                <Link href="/admissions" className="btn btn-outline min-h-[44px] px-10 w-full sm:w-auto">
+                  Apply for admission
+                </Link>
+              </div>
             </div>
-          </div>
+          </motion.div>
         </div>
       </section>
     </main>

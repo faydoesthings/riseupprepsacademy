@@ -1,127 +1,130 @@
 import { Suspense } from "react";
+import PortalListPage from "@/components/portal/PortalListPage";
 import prisma from "@/lib/prisma";
 import PageHeader from "@/components/ui/PageHeader";
 import DataTable from "@/components/ui/DataTable";
+import Pagination from "@/components/ui/Pagination";
+import ListPageError from "@/components/ui/ListPageError";
 import DateFilter from "@/components/ui/DateFilter";
 import { attendanceDateRange } from "@/lib/auth-utils";
+import { requirePortalRole } from "@/lib/portal-auth";
+import {
+  buildAttendanceListWhere,
+  paginationArgs,
+  parsePageParam,
+  parseSearchParam,
+} from "@/lib/list-query";
 import { Users, CheckCircle, XCircle, Clock } from "lucide-react";
-import { auth } from "@/lib/auth";
-import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminAttendancePage({
   searchParams,
 }: {
-  searchParams: { date?: string };
+  searchParams: { date?: string; search?: string; page?: string };
 }) {
-  const session = await auth();
-  if ((session?.user as { role?: string } | undefined)?.role !== "SUPER_ADMIN") {
-    redirect("/login");
-  }
+  try {
+    await requirePortalRole("SUPER_ADMIN");
 
-  const dateString = searchParams.date || new Date().toISOString().split("T")[0];
-  const { start, end } = attendanceDateRange(dateString);
+    const dateString = searchParams.date || new Date().toISOString().split("T")[0];
+    const { start, end } = attendanceDateRange(dateString);
+    const search = parseSearchParam(searchParams.search);
+    const page = parsePageParam(searchParams.page);
+    const { skip, take } = paginationArgs(page);
+    const where = buildAttendanceListWhere(search, start, end);
 
-  const attendances = await prisma.attendance.findMany({
-    where: {
-      date: { gte: start, lte: end },
-    },
-    include: {
-      student: { include: { user: true, class: true } },
-      period: { include: { subject: true } },
-    },
-    orderBy: { markedAt: "desc" },
-  });
+    const [attendances, total, statusGroups] = await Promise.all([
+      prisma.attendance.findMany({
+        where,
+        include: {
+          student: { include: { user: true, class: true } },
+          period: { include: { subject: true } },
+        },
+        orderBy: { markedAt: "desc" },
+        skip,
+        take,
+      }),
+      prisma.attendance.count({ where }),
+      prisma.attendance.groupBy({
+        by: ["status"],
+        where: { date: { gte: start, lte: end } },
+        _count: true,
+      }),
+    ]);
 
-  const total = attendances.length;
-  const present = attendances.filter((a) => a.status === "PRESENT").length;
-  const absent = attendances.filter((a) => a.status === "ABSENT").length;
-  const late = attendances.filter((a) => a.status === "LATE").length;
-  const presentPercentage = total > 0 ? Math.round((present / total) * 100) : 0;
+    const countByStatus = (status: string) =>
+      statusGroups.find((g) => g.status === status)?._count ?? 0;
+    const present = countByStatus("PRESENT");
+    const absent = countByStatus("ABSENT");
+    const late = countByStatus("LATE");
+    const dayTotal = present + absent + late;
+    const presentPercentage = dayTotal > 0 ? Math.round((present / dayTotal) * 100) : 0;
 
-  return (
-    <div className="animate-fade-in-up">
-      <div className="flex flex-col md:flex-row justify-between md:items-end gap-4 mb-8">
+    const statCards = [
+      { label: "Total records", value: String(dayTotal), icon: Users, tone: "orange" as const },
+      { label: `Present (${presentPercentage}%)`, value: String(present), icon: CheckCircle, tone: "teal" as const },
+      { label: "Late", value: String(late), icon: Clock, tone: "orange" as const },
+      { label: "Absent", value: String(absent), icon: XCircle, tone: "crimson" as const },
+    ];
+
+    return (
+      <PortalListPage>
         <PageHeader
-          title="Attendance Overview"
+          title="Attendance"
           description="Monitor daily attendance metrics across all classes."
+          searchPlaceholder="Search by student or subject..."
+          customAction={
+            <Suspense fallback={null}>
+              <DateFilter defaultValue={dateString} />
+            </Suspense>
+          }
         />
-        <Suspense fallback={null}>
-          <DateFilter defaultValue={dateString} />
-        </Suspense>
-      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <div className="card-elevated p-6 bg-gradient-to-br from-[#05335C] to-[#0A4A82] text-white">
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center">
-              <Users className="w-5 h-5 text-white" />
-            </div>
-          </div>
-          <p className="text-white/80 text-sm font-medium">Total Records Today</p>
-          <h3 className="text-3xl font-bold">{total}</h3>
-        </div>
+        <section className="portal-stat-grid portal-stat-grid--4" aria-label="Attendance summary">
+          {statCards.map((card) => {
+            const Icon = card.icon;
+            return (
+              <article key={card.label} className={`portal-kpi portal-kpi--${card.tone}`}>
+                <div className="portal-kpi__icon" aria-hidden>
+                  <Icon className="w-5 h-5" strokeWidth={2} />
+                </div>
+                <div className="portal-kpi__body">
+                  <p className="portal-kpi__label">{card.label}</p>
+                  <p className="portal-kpi__value">{card.value}</p>
+                </div>
+              </article>
+            );
+          })}
+        </section>
 
-        <div className="card-elevated p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
-              <CheckCircle className="w-5 h-5 text-green-600" />
-            </div>
-            <span className="text-xl font-bold text-green-600">{presentPercentage}%</span>
-          </div>
-          <p className="text-gray-500 text-sm font-medium">Present</p>
-          <h3 className="text-2xl font-bold text-gray-800">{present}</h3>
-        </div>
-
-        <div className="card-elevated p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center">
-              <Clock className="w-5 h-5 text-orange-500" />
-            </div>
-          </div>
-          <p className="text-gray-500 text-sm font-medium">Late</p>
-          <h3 className="text-2xl font-bold text-gray-800">{late}</h3>
-        </div>
-
-        <div className="card-elevated p-6 border-b-4 border-red-500">
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center">
-              <XCircle className="w-5 h-5 text-red-600" />
-            </div>
-          </div>
-          <p className="text-gray-500 text-sm font-medium">Absent</p>
-          <h3 className="text-2xl font-bold text-gray-800">{absent}</h3>
-        </div>
-      </div>
-
-      <div className="card-elevated p-6">
-        <h3 className="text-lg font-bold text-[#05335C] mb-4">Recent Attendance Logs</h3>
         <DataTable
-          headers={["Student", "Class", "Period / Subject", "Time Marked", "Status"]}
+          headers={["Student", "Class", "Period / subject", "Time marked", "Status"]}
           isEmpty={attendances.length === 0}
+          emptyMessage={
+            search
+              ? "No attendance records match your search for this date."
+              : "No attendance marked for this date yet."
+          }
         >
           {attendances.map((record) => (
-            <tr key={record.id} className="hover:bg-gray-50">
-              <td className="px-6 py-4 font-medium text-gray-800">
-                {record.student.user.name}
-              </td>
-              <td className="px-6 py-4">
-                <span className="text-xs font-semibold px-2 py-1 rounded bg-gray-100 text-gray-600">
+            <tr key={record.id}>
+              <td className="font-medium text-white text-sm">{record.student.user.name}</td>
+              <td>
+                <span className="badge badge-info">
                   {record.student.class?.grade} {record.student.class?.section}
                 </span>
               </td>
-              <td className="px-6 py-4 text-sm text-gray-600">
+              <td className="text-sm text-white/70">
                 {record.period.subject.name}{" "}
-                <span className="text-gray-400">({record.period.startTime})</span>
+                <span className="text-white/30">({record.period.startTime})</span>
               </td>
-              <td className="px-6 py-4 text-sm text-gray-500">
+              <td className="text-sm text-white/40">
                 {record.markedAt.toLocaleTimeString([], {
                   hour: "2-digit",
                   minute: "2-digit",
                 })}
               </td>
-              <td className="px-6 py-4">
+              <td>
                 {record.status === "PRESENT" && (
                   <span className="badge badge-success">Present</span>
                 )}
@@ -135,7 +138,24 @@ export default async function AdminAttendancePage({
             </tr>
           ))}
         </DataTable>
-      </div>
-    </div>
-  );
+
+        <Pagination
+          page={page}
+          total={total}
+          basePath="/portal/admin/attendance"
+          searchParams={{
+            search: search || undefined,
+            date: dateString !== new Date().toISOString().split("T")[0] ? dateString : undefined,
+          }}
+        />
+      </PortalListPage>
+    );
+  } catch (error) {
+    console.error("AdminAttendancePage:", error);
+    return (
+      <PortalListPage>
+        <ListPageError />
+      </PortalListPage>
+    );
+  }
 }

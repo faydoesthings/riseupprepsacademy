@@ -19,6 +19,13 @@ export async function createSubject(formData: FormData) {
       return { success: false, error: "Missing required fields" };
     }
 
+    const existing = await prisma.subject.findFirst({
+      where: { classId, name },
+    });
+    if (existing) {
+      return { success: false, error: "This subject already exists for the selected class" };
+    }
+
     await prisma.subject.create({
       data: {
         name,

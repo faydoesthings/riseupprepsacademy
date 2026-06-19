@@ -4,8 +4,15 @@ import { useState } from "react";
 import { X, Loader2, DollarSign } from "lucide-react";
 import { collectFee } from "@/app/actions/finance-actions";
 import toast from "react-hot-toast";
+import type { StudentOption, FeeStructureOption } from "@/lib/form-types";
 
-export default function FeePaymentFormModal({ students, feeStructures }: any) {
+export default function FeePaymentFormModal({
+  students,
+  feeStructures,
+}: {
+  students: StudentOption[];
+  feeStructures: FeeStructureOption[];
+}) {
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -41,14 +48,14 @@ export default function FeePaymentFormModal({ students, feeStructures }: any) {
                 <label className="form-label-caps">Select student <span className="text-[#F78C1F]">*</span></label>
                 <select name="studentId" required className="form-select">
                   <option value="">Search Student...</option>
-                  {students.map((s: any) => <option key={s.id} value={s.id}>{s.user.name} ({s.class?.grade || 'No Class'})</option>)}
+                  {students.map((s) => <option key={s.id} value={s.id}>{s.user.name} ({s.class?.grade || 'No Class'})</option>)}
                 </select>
               </div>
               <div>
                 <label className="form-label-caps">Fee structure <span className="text-[#F78C1F]">*</span></label>
                 <select name="feeStructureId" required className="form-select">
                   <option value="">Select Fee Plan</option>
-                  {feeStructures.map((f: any) => <option key={f.id} value={f.id}>{f.name} - Rs {f.amount}</option>)}
+                  {feeStructures.map((f) => <option key={f.id} value={f.id}>{f.name} - Rs {f.amount}</option>)}
                 </select>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

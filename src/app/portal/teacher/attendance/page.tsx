@@ -1,17 +1,31 @@
+import { Suspense } from "react";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import PortalListPage from "@/components/portal/PortalListPage";
 import PageHeader from "@/components/ui/PageHeader";
+import DateFilter from "@/components/ui/DateFilter";
 import AttendanceMarker from "@/components/portal/attendance/AttendanceMarker";
+import TeacherProfileMissing from "@/components/portal/TeacherProfileMissing";
 import { redirect } from "next/navigation";
 import { Calendar, Clock, BookOpen } from "lucide-react";
 import { attendanceDateRange } from "@/lib/auth-utils";
 
 export const dynamic = "force-dynamic";
 
+const DAY_NAMES = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+];
+
 export default async function TeacherAttendancePage({
   searchParams,
 }: {
-  searchParams: { period?: string };
+  searchParams: { period?: string; date?: string };
 }) {
   const session = await auth();
   if (!session?.user?.email) redirect("/login");
@@ -19,48 +33,46 @@ export default async function TeacherAttendancePage({
     redirect("/login");
   }
 
-  // Get teacher profile
   const teacher = await prisma.teacher.findFirst({
     where: { user: { email: session.user.email } },
   });
 
-  if (!teacher) {
-    return (
-      <div className="p-8 text-center text-red-600">
-        You must be registered as a Teacher to access this page.
-      </div>
-    );
-  }
+  if (!teacher) return <TeacherProfileMissing />;
 
-  const today = new Date();
-  const dayOfWeek = today.getDay(); // 0=Sunday, 1=Monday...
-  const dateString = today.toISOString().split("T")[0];
+  const todayString = new Date().toISOString().split("T")[0];
+  const dateString = searchParams.date || todayString;
+  const selectedDate = new Date(`${dateString}T12:00:00`);
+  const dayOfWeek = selectedDate.getDay();
+  const isToday = dateString === todayString;
+  const dayLabel = DAY_NAMES[dayOfWeek];
 
-  // Get today's schedule
-  const todayPeriods = await prisma.period.findMany({
-    where: { 
+  const schedulePeriods = await prisma.period.findMany({
+    where: {
       teacherId: teacher.id,
-      dayOfWeek: dayOfWeek
+      dayOfWeek: dayOfWeek,
     },
     include: {
       class: true,
       subject: true,
     },
-    orderBy: { startTime: "asc" }
+    orderBy: { startTime: "asc" },
   });
 
-  const selectedPeriodId = searchParams.period || (todayPeriods.length > 0 ? todayPeriods[0].id : undefined);
-  const activePeriod = todayPeriods.find(p => p.id === selectedPeriodId);
+  const selectedPeriodId =
+    searchParams.period ||
+    (schedulePeriods.length > 0 ? schedulePeriods[0].id : undefined);
+  const activePeriod = schedulePeriods.find((p) => p.id === selectedPeriodId);
 
   const { start: attendanceStart, end: attendanceEnd } = attendanceDateRange(dateString);
 
-  // Fetch students for the active period
   let studentsData: Array<{
     id: string;
     name: string;
     rollNumber: string | null;
     existingStatus?: "PRESENT" | "ABSENT" | "LATE";
+    markedAt?: Date;
   }> = [];
+
   if (activePeriod) {
     const rawStudents = await prisma.student.findMany({
       where: { classId: activePeriod.classId },
@@ -73,10 +85,10 @@ export default async function TeacherAttendancePage({
           },
         },
       },
-      orderBy: { user: { name: "asc" } }
+      orderBy: { user: { name: "asc" } },
     });
 
-    studentsData = rawStudents.map(s => ({
+    studentsData = rawStudents.map((s) => ({
       id: s.id,
       name: s.user.name,
       rollNumber: s.rollNumber,
@@ -84,78 +96,119 @@ export default async function TeacherAttendancePage({
         s.attendances.length > 0
           ? (s.attendances[0].status as "PRESENT" | "ABSENT" | "LATE")
           : undefined,
+      markedAt: s.attendances[0]?.markedAt,
     }));
   }
 
+  const alreadyMarkedCount = studentsData.filter((s) => s.existingStatus).length;
+  const lastMarkedAt = studentsData
+    .map((s) => s.markedAt)
+    .filter((d): d is Date => !!d)
+    .sort((a, b) => b.getTime() - a.getTime())[0];
+
+  const querySuffix = (periodId: string) => {
+    const params = new URLSearchParams();
+    params.set("period", periodId);
+    if (dateString !== todayString) {
+      params.set("date", dateString);
+    }
+    return `?${params.toString()}`;
+  };
+
   return (
-    <div className="animate-fade-in-up">
+    <PortalListPage>
       <PageHeader
-        title="Daily Attendance"
-        description="Mark student attendance for your scheduled classes today."
+        eyebrow="Teacher portal"
+        title="Attendance"
+        description={
+          isToday
+            ? "Mark student attendance for today's scheduled classes."
+            : `Viewing ${dayLabel}'s schedule for the selected date.`
+        }
+        customAction={
+          <Suspense fallback={null}>
+            <DateFilter defaultValue={dateString} />
+          </Suspense>
+        }
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-        {/* Left Sidebar: Today's Schedule */}
-        <div className="lg:col-span-1 space-y-4">
-          <h3 className="font-bold text-white flex items-center gap-2 mb-4">
-            <Calendar className="w-5 h-5 text-[#F78C1F]" />
-            Today&apos;s schedule
-          </h3>
-          
-          {todayPeriods.length === 0 ? (
-            <div className="p-4 border border-white/[0.08] rounded-xl text-center text-white/40 text-sm bg-white/[0.02]">
-              You have no classes scheduled for today.
+      <div className="portal-attendance-layout">
+        <aside className="portal-panel">
+          <header className="portal-panel__header portal-panel__header--compact">
+            <div>
+              <h2 className="portal-panel__title flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-[#F78C1F]" aria-hidden />
+                {isToday ? "Today's schedule" : `${dayLabel} schedule`}
+              </h2>
+              <p className="portal-panel__desc">
+                {schedulePeriods.length === 0
+                  ? `No classes on ${dayLabel.toLowerCase()}s.`
+                  : "Select a period to mark attendance."}
+              </p>
+            </div>
+          </header>
+
+          {schedulePeriods.length === 0 ? (
+            <div className="portal-empty-state portal-empty-state--inline">
+              <p className="text-white/45 text-sm">
+                You have no classes scheduled for this day of the week.
+              </p>
             </div>
           ) : (
-            <div className="space-y-3">
-              {todayPeriods.map(period => (
+            <div className="space-y-2">
+              {schedulePeriods.map((period) => (
                 <a
                   key={period.id}
-                  href={`?period=${period.id}`}
-                  className={`block p-4 rounded-xl border transition-all ${
-                    selectedPeriodId === period.id 
-                      ? "border-[#F78C1F]/40 bg-[#F78C1F]/10" 
-                      : "border-white/[0.08] bg-white/[0.02] hover:border-[#F78C1F]/30 hover:bg-white/[0.04]"
+                  href={querySuffix(period.id)}
+                  className={`portal-period-card ${
+                    selectedPeriodId === period.id ? "portal-period-card--active" : ""
                   }`}
                 >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className={`text-xs font-bold px-2 py-1 rounded border ${
-                      selectedPeriodId === period.id ? "text-[#F78C1F] border-[#F78C1F]/30 bg-[#F78C1F]/10" : "text-white/50 border-white/10"
-                    }`}>
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <span className="portal-period-card__badge">
                       {period.class.grade} {period.class.section}
                     </span>
-                    <span className="flex items-center gap-1 text-xs text-white/40 font-mono">
-                      <Clock className="w-3 h-3" />
+                    <span className="portal-period-card__time">
+                      <Clock className="w-3 h-3" aria-hidden />
                       {period.startTime}
                     </span>
                   </div>
-                  <h4 className="font-semibold text-white flex items-center gap-2 text-sm">
-                    <BookOpen className="w-4 h-4 text-[#F78C1F]" />
+                  <p className="portal-period-card__subject flex items-center gap-2">
+                    <BookOpen className="w-4 h-4 text-[#F78C1F]" aria-hidden />
                     {period.subject.name}
-                  </h4>
+                  </p>
                 </a>
               ))}
             </div>
           )}
-        </div>
+        </aside>
 
-        {/* Right Content: Attendance Marker */}
-        <div className="lg:col-span-3">
+        <div className="portal-attendance-layout__main">
           {activePeriod ? (
-            <AttendanceMarker 
+            <AttendanceMarker
+              key={`${activePeriod.id}-${dateString}`}
               periodId={activePeriod.id}
               dateString={dateString}
               teacherId={teacher.id}
               students={studentsData}
+              periodLabel={`${activePeriod.subject.name} · ${activePeriod.class.grade}${
+                activePeriod.class.section ? ` ${activePeriod.class.section}` : ""
+              } · ${activePeriod.startTime}`}
+              isToday={isToday}
+              alreadyMarkedCount={alreadyMarkedCount}
+              lastMarkedAt={lastMarkedAt?.toISOString()}
             />
           ) : (
-            <div className="h-64 flex flex-col items-center justify-center text-white/40 border-2 border-dashed border-white/10 rounded-2xl bg-white/[0.02] p-6 text-center text-sm">
-              <Calendar className="w-12 h-12 mb-3 text-[#F78C1F]/50" />
-              <p>Select a period from your schedule to mark attendance.</p>
+            <div className="portal-empty-state">
+              <Calendar className="w-12 h-12 text-[#F78C1F]/40 mx-auto mb-4" aria-hidden />
+              <h3 className="text-lg font-bold text-white mb-2">Select a period</h3>
+              <p className="text-white/45 text-sm max-w-sm mx-auto">
+                Choose a class from the schedule to mark attendance for the selected date.
+              </p>
             </div>
           )}
         </div>
       </div>
-    </div>
+    </PortalListPage>
   );
 }

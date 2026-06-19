@@ -4,8 +4,17 @@ import { useState } from "react";
 import { X, Loader2, Plus, Link as LinkIcon } from "lucide-react";
 import { createAssignment } from "@/app/actions/academic-actions";
 import toast from "react-hot-toast";
+import type { ClassOption, SubjectOption } from "@/lib/form-types";
 
-export default function AssignmentFormModal({ classes, subjects, teacherId }: any) {
+export default function AssignmentFormModal({
+  classes,
+  subjects,
+  teacherId,
+}: {
+  classes: ClassOption[];
+  subjects: SubjectOption[];
+  teacherId: string;
+}) {
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -52,7 +61,7 @@ export default function AssignmentFormModal({ classes, subjects, teacherId }: an
                   <label className="form-label-caps">Class <span className="text-[#F78C1F]">*</span></label>
                   <select name="classId" required className="form-select">
                     <option value="">Select class</option>
-                    {classes.map((c: any) => (
+                    {classes.map((c) => (
                       <option key={c.id} value={c.id}>{c.grade} {c.section}</option>
                     ))}
                   </select>
@@ -61,7 +70,7 @@ export default function AssignmentFormModal({ classes, subjects, teacherId }: an
                   <label className="form-label-caps">Subject <span className="text-[#F78C1F]">*</span></label>
                   <select name="subjectId" required className="form-select">
                     <option value="">Select subject</option>
-                    {subjects.map((s: any) => (
+                    {subjects.map((s) => (
                       <option key={s.id} value={s.id}>{s.name}</option>
                     ))}
                   </select>

@@ -1,70 +1,103 @@
 import Link from "next/link";
-import { Heart, Mail, Phone, MapPin } from "lucide-react";
+import { Heart, Mail, Phone, MapPin, GraduationCap, LogIn } from "lucide-react";
 import BrandLogo from "@/components/brand/BrandLogo";
 
+const exploreLinks = [
+  { label: "About", href: "/about" },
+  { label: "Programs", href: "/programs" },
+  { label: "Impact", href: "/impact" },
+  { label: "Admissions", href: "/admissions" },
+  { label: "Blog", href: "/blog" },
+  { label: "Donate", href: "/donate" },
+];
+
+const footerStats = ["All grades welcome", "Not-for-profit", "Sukkur, Sindh"];
+
 export default function Footer() {
+  const year = new Date().getFullYear();
+
   return (
-    <footer className="bg-[#070B14] border-t border-white/[0.06]">
-      <div className="container-main py-14 md:py-16">
-        <div className="grid md:grid-cols-4 gap-10 md:gap-8">
-          <div className="md:col-span-1">
+    <footer className="site-footer">
+      <div className="container-main">
+        <div className="site-footer__grid">
+          <div className="site-footer__brand">
             <BrandLogo variant="full" href="/" />
-            <p className="text-sm text-white/40 leading-relaxed mt-5">
-              Transforming lives through quality education in Sukkur, Sindh, Pakistan.
+            <p>
+              A not-for-profit academy in Sukkur building futures through rigorous academics,
+              mentorship, and community support.
             </p>
-          </div>
-
-          <div>
-            <h4 className="text-xs font-semibold text-white/30 uppercase tracking-wider mb-4">Quick links</h4>
-            <ul className="space-y-2.5">
-              {[
-                { label: "About", href: "/about" },
-                { label: "Programs", href: "/programs" },
-                { label: "Admissions", href: "/admissions" },
-                { label: "Impact", href: "/impact" },
-                { label: "Donate", href: "/donate" },
-              ].map((link) => (
-                <li key={link.href}>
-                  <Link href={link.href} className="text-sm text-white/40 hover:text-white/80 transition-colors">
-                    {link.label}
-                  </Link>
-                </li>
+            <div className="site-footer__stats" aria-label="Academy highlights">
+              {footerStats.map((stat) => (
+                <span key={stat} className="site-footer__stat">
+                  {stat}
+                </span>
               ))}
-            </ul>
+            </div>
           </div>
 
           <div>
-            <h4 className="text-xs font-semibold text-white/30 uppercase tracking-wider mb-4">Contact</h4>
-            <ul className="space-y-3 text-sm text-white/40">
-              <li className="flex items-start gap-2">
-                <MapPin className="w-4 h-4 text-[#F78C1F] mt-0.5 shrink-0" />
-                Sukkur / Rohri, Sindh, Pakistan
+            <h4 className="site-footer__heading">Explore</h4>
+            <nav aria-label="Footer navigation">
+              <ul className="site-footer__links">
+                {exploreLinks.map((link) => (
+                  <li key={link.href}>
+                    <Link href={link.href} className="site-footer__link">
+                      {link.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          </div>
+
+          <div>
+            <h4 className="site-footer__heading">Contact</h4>
+            <ul className="site-footer__contact">
+              <li className="site-footer__contact-item">
+                <MapPin aria-hidden />
+                <span>Sukkur / Rohri, Sindh, Pakistan</span>
               </li>
-              <li className="flex items-center gap-2">
-                <Mail className="w-4 h-4 text-[#F78C1F] shrink-0" />
-                info@riseuppreps.org
+              <li className="site-footer__contact-item">
+                <Mail aria-hidden />
+                <a href="mailto:info@riseuppreps.com" className="site-footer__link">
+                  info@riseuppreps.com
+                </a>
               </li>
-              <li className="flex items-center gap-2">
-                <Phone className="w-4 h-4 text-[#F78C1F] shrink-0" />
-                +92 300 0000000
+              <li className="site-footer__contact-item">
+                <Phone aria-hidden />
+                <a href="tel:+923001234567" className="site-footer__link">
+                  +92 300 123 4567
+                </a>
               </li>
             </ul>
           </div>
 
-          <div>
-            <h4 className="text-xs font-semibold text-white/30 uppercase tracking-wider mb-4">Support a student</h4>
-            <p className="text-sm text-white/40 mb-4 leading-relaxed">
-              PKR 2,500/month covers tuition, supplies, and mentorship for one child.
+          <div className="site-footer__support">
+            <p className="site-footer__support-title">
+              PKR 2,500 sponsors one month of school for a child.
             </p>
-            <Link href="/donate" className="btn btn-primary btn-sm w-full min-h-[44px]">
-              <Heart className="w-4 h-4" />
+            <p className="site-footer__support-desc">
+              Tuition, supplies, and daily support — every gift goes directly to students.
+            </p>
+            <Link href="/donate" className="btn btn-primary min-h-[48px]">
+              <Heart className="w-4 h-4" aria-hidden />
               Donate now
             </Link>
+            <div className="site-footer__actions">
+              <Link href="/admissions" className="site-footer__link inline-flex items-center gap-2">
+                <GraduationCap className="w-3.5 h-3.5 text-[#F78C1F]" aria-hidden />
+                Apply for admission
+              </Link>
+              <Link href="/login" className="site-footer__link inline-flex items-center gap-2">
+                <LogIn className="w-3.5 h-3.5 text-[#0ABFBC]" aria-hidden />
+                Portal login
+              </Link>
+            </div>
           </div>
         </div>
 
-        <div className="border-t border-white/[0.04] mt-12 pt-6 flex flex-col md:flex-row items-center justify-between gap-3 text-xs text-white/25">
-          <p>© {new Date().getFullYear()} RiseUp Preps Academy. All rights reserved.</p>
+        <div className="site-footer__bottom">
+          <p>© {year} RiseUp Preps Academy. All rights reserved.</p>
           <p>Built with purpose in Sindh, Pakistan.</p>
         </div>
       </div>

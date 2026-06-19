@@ -1,10 +1,10 @@
-import ComingSoon from "@/components/portal/ComingSoon";
+import PortalNotFound from "@/components/portal/PortalNotFound";
 
-export default function AdminPlaceholderPage({ params }: { params: { slug: string[] } }) {
-  const moduleName = params.slug[0]
-    .split("-")
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(" ");
-
-  return <ComingSoon moduleName={moduleName} backHref="/portal/admin" />;
+export default function AdminPlaceholderPage({
+  params,
+}: {
+  params: { slug: string[] };
+}) {
+  const path = `/portal/admin/${params.slug.join("/")}`;
+  return <PortalNotFound attemptedPath={path} backHref="/portal/admin" />;
 }

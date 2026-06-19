@@ -1,79 +1,157 @@
-import { auth } from "@/lib/auth";
+import PortalListPage from "@/components/portal/PortalListPage";
 import prisma from "@/lib/prisma";
 import PageHeader from "@/components/ui/PageHeader";
 import DataTable from "@/components/ui/DataTable";
+import Pagination from "@/components/ui/Pagination";
+import ListPageError from "@/components/ui/ListPageError";
 import AssignmentFormModal from "@/components/portal/forms/AssignmentFormModal";
+import GradeAssignmentLauncher from "@/components/portal/assignments/GradeAssignmentLauncher";
+import TeacherProfileMissing from "@/components/portal/TeacherProfileMissing";
 import { ExternalLink, Users } from "lucide-react";
-import { redirect } from "next/navigation";
 import Link from "next/link";
+import { requirePortalRole } from "@/lib/portal-auth";
+import { paginationArgs, parsePageParam } from "@/lib/list-query";
 
 export const dynamic = "force-dynamic";
 
-export default async function TeacherAssignmentsPage() {
-  const session = await auth();
-  if (!session?.user?.email) redirect("/login");
+export default async function TeacherAssignmentsPage({
+  searchParams,
+}: {
+  searchParams: { page?: string; grade?: string };
+}) {
+  try {
+    const session = await requirePortalRole("TEACHER");
+    const page = parsePageParam(searchParams.page);
+    const { skip, take } = paginationArgs(page);
 
-  const teacher = await prisma.teacher.findFirst({
-    where: { user: { email: session.user.email } },
-  });
+    const teacher = await prisma.teacher.findFirst({
+      where: { user: { email: session.user?.email ?? "" } },
+    });
 
-  if (!teacher) return <div className="p-8 text-center text-red-600">Unauthorized</div>;
+    if (!teacher) return <TeacherProfileMissing />;
 
-  const assignments = await prisma.assignment.findMany({
-    where: { teacherId: teacher.id },
-    include: { 
-      class: true, 
-      subject: true,
-      _count: { select: { submissions: true } }
-    },
-    orderBy: { createdAt: "desc" }
-  });
+    const where = { teacherId: teacher.id };
 
-  const classes = await prisma.class.findMany({ orderBy: { grade: "asc" } });
-  const subjects = await prisma.subject.findMany({ orderBy: { name: "asc" } });
+    const [assignments, total, classes, subjects, gradingAssignment] = await Promise.all([
+      prisma.assignment.findMany({
+        where,
+        include: {
+          class: true,
+          subject: true,
+          _count: { select: { submissions: true } },
+        },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take,
+      }),
+      prisma.assignment.count({ where }),
+      prisma.class.findMany({
+        where: { teacherId: teacher.id },
+        orderBy: { grade: "asc" },
+      }),
+      prisma.subject.findMany({
+        where: { teacherId: teacher.id },
+        orderBy: { name: "asc" },
+      }),
+      searchParams.grade
+        ? prisma.assignment.findFirst({
+            where: { id: searchParams.grade, teacherId: teacher.id },
+            include: {
+              submissions: {
+                include: { student: { include: { user: true } } },
+              },
+            },
+          })
+        : null,
+    ]);
 
-  return (
-    <div className="animate-fade-in-up">
-      <PageHeader
-        title="Assignments"
-        description="Create and grade homework and assignments for your classes."
-        customAction={<AssignmentFormModal classes={classes} subjects={subjects} teacherId={teacher.id} />}
-      />
+    const gradingSubmissions =
+      gradingAssignment?.submissions.map((s) => ({
+        id: s.id,
+        studentName: s.student.user.name,
+        fileUrl: s.fileUrl,
+        marks: s.marks,
+        grade: s.grade,
+        totalMarks: null,
+      })) ?? [];
 
-      <DataTable headers={["Title", "Class & Subject", "Due Date", "Submissions", "Resource", "Actions"]} isEmpty={assignments.length === 0}>
-        {assignments.map(a => (
-          <tr key={a.id} className="hover:bg-gray-50">
-            <td className="px-6 py-4">
-              <span className="font-bold text-[#05335C] block">{a.title}</span>
-              <span className="text-xs text-gray-500">{a.description?.substring(0, 50)}...</span>
-            </td>
-            <td className="px-6 py-4">
-              <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs block w-max mb-1">{a.class.grade}</span>
-              <span className="text-xs text-gray-600">{a.subject.name}</span>
-            </td>
-            <td className="px-6 py-4 text-sm text-gray-600">
-              {a.dueDate.toLocaleDateString()}
-            </td>
-            <td className="px-6 py-4">
-              <span className="flex items-center gap-1 text-sm font-semibold text-green-600">
-                <Users className="w-4 h-4" /> {a._count.submissions}
-              </span>
-            </td>
-            <td className="px-6 py-4">
-              {a.fileUrl ? (
-                <a href={a.fileUrl} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline flex items-center gap-1 text-sm">
-                  View <ExternalLink className="w-3 h-3" />
-                </a>
-              ) : <span className="text-gray-400 text-sm">-</span>}
-            </td>
-            <td className="px-6 py-4">
-              <button className="text-xs font-semibold bg-[#F78C1F]/10 text-[#F78C1F] px-3 py-1.5 rounded hover:bg-[#F78C1F]/20">
-                Grade Submissions
-              </button>
-            </td>
-          </tr>
-        ))}
-      </DataTable>
-    </div>
-  );
+    return (
+      <PortalListPage>
+        <PageHeader
+          eyebrow="Teacher portal"
+          title="Assignments"
+          description="Create and grade homework and assignments for your classes."
+          customAction={
+            <AssignmentFormModal classes={classes} subjects={subjects} teacherId={teacher.id} />
+          }
+        />
+
+        <DataTable
+          headers={["Title", "Class & subject", "Due date", "Submissions", "Resource", "Actions"]}
+          isEmpty={assignments.length === 0}
+          emptyMessage="No assignments created yet."
+        >
+          {assignments.map((a) => (
+            <tr key={a.id}>
+              <td>
+                <span className="font-bold text-white block text-sm">{a.title}</span>
+                {a.description && (
+                  <span className="text-xs text-white/40 line-clamp-1">{a.description}</span>
+                )}
+              </td>
+              <td>
+                <span className="badge badge-info text-xs mb-1">{a.class.grade}</span>
+                <span className="text-xs text-white/50 block">{a.subject.name}</span>
+              </td>
+              <td className="text-sm text-white/60">{a.dueDate.toLocaleDateString()}</td>
+              <td>
+                <span className="flex items-center gap-1 text-sm font-semibold text-[#0ABFBC]">
+                  <Users className="w-4 h-4" aria-hidden /> {a._count.submissions}
+                </span>
+              </td>
+              <td>
+                {a.fileUrl ? (
+                  <a
+                    href={a.fileUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[#F78C1F] hover:underline flex items-center gap-1 text-sm"
+                  >
+                    View <ExternalLink className="w-3 h-3" aria-hidden />
+                  </a>
+                ) : (
+                  <span className="text-white/30 text-sm">—</span>
+                )}
+              </td>
+              <td>
+                <Link
+                  href={`/portal/teacher/assignments?grade=${a.id}`}
+                  className="portal-btn portal-btn--ghost text-xs px-3 py-1.5 min-h-[36px]"
+                >
+                  Grade
+                </Link>
+              </td>
+            </tr>
+          ))}
+        </DataTable>
+
+        <Pagination page={page} total={total} basePath="/portal/teacher/assignments" />
+
+        {gradingAssignment && (
+          <GradeAssignmentLauncher
+            assignmentId={gradingAssignment.id}
+            assignmentTitle={gradingAssignment.title}
+            submissions={gradingSubmissions}
+          />
+        )}
+      </PortalListPage>
+    );
+  } catch (error) {
+    console.error("TeacherAssignmentsPage:", error);
+    return (
+      <PortalListPage>
+        <ListPageError />
+      </PortalListPage>
+    );
+  }
 }

@@ -5,7 +5,13 @@ import { X, Loader2, UploadCloud } from "lucide-react";
 import { submitAssignment } from "@/app/actions/academic-actions";
 import toast from "react-hot-toast";
 
-export default function SubmissionFormModal({ assignmentId, studentId }: any) {
+export default function SubmissionFormModal({
+  assignmentId,
+  studentId,
+}: {
+  assignmentId: string;
+  studentId: string;
+}) {
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 

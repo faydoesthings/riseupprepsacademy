@@ -4,8 +4,15 @@ import { useState } from "react";
 import { X, Loader2, UserPlus } from "lucide-react";
 import { createSponsorship } from "@/app/actions/donor-actions";
 import toast from "react-hot-toast";
+import type { DonorOption, StudentOption } from "@/lib/form-types";
 
-export default function SponsorshipFormModal({ donors, students }: any) {
+export default function SponsorshipFormModal({
+  donors,
+  students,
+}: {
+  donors: DonorOption[];
+  students: StudentOption[];
+}) {
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -41,14 +48,14 @@ export default function SponsorshipFormModal({ donors, students }: any) {
                 <label className="form-label-caps">Select donor / sponsor <span className="text-[#F78C1F]">*</span></label>
                 <select name="donorId" required className="form-select">
                   <option value="">Choose sponsor...</option>
-                  {donors.map((d: any) => <option key={d.id} value={d.id}>{d.user.name}</option>)}
+                  {donors.map((d) => <option key={d.id} value={d.id}>{d.user.name}</option>)}
                 </select>
               </div>
               <div>
                 <label className="form-label-caps">Select student <span className="text-[#F78C1F]">*</span></label>
                 <select name="studentId" required className="form-select">
                   <option value="">Choose student to sponsor...</option>
-                  {students.map((s: any) => (
+                  {students.map((s) => (
                     <option key={s.id} value={s.id}>{s.user.name} ({s.class?.grade || "No class"})</option>
                   ))}
                 </select>

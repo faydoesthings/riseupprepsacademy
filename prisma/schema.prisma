@@ -3,11 +3,11 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-// ==================== ENUMS (as string fields for SQLite) ====================
+// ==================== ENUMS (stored as string fields) ====================
 
 // Role: SUPER_ADMIN, ACCOUNTANT, TEACHER, STUDENT, DONOR
 // UserStatus: ACTIVE, INACTIVE, PENDING, SUSPENDED
@@ -294,7 +294,9 @@ model FeePayment {
   createdAt      DateTime @default(now())
 
   student      Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  feeStructure FeeStructure @relation(fields: [feeStructureId], references: [id])
+  feeStructure FeeStructure @relation(fields: [feeStructureId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, feeStructureId, month])
 }
 
 model Expense {
@@ -319,7 +321,9 @@ model Payroll {
   processedAt DateTime?
   createdAt   DateTime  @default(now())
 
-  teacher Teacher @relation(fields: [teacherId], references: [id])
+  teacher Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@unique([teacherId, month, year])
 }
 
 // ==================== DONOR MODELS ====================

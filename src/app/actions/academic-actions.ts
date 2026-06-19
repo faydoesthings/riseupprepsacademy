@@ -3,6 +3,7 @@
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { requireRoleAction, getRoleFromSession } from "@/lib/auth-utils";
+import { logAudit } from "@/lib/audit-log";
 import { z } from "zod";
 
 const MaterialSchema = z.object({
@@ -27,7 +28,7 @@ export async function createMaterial(formData: FormData, teacherId: string) {
 
     const data = {
       title: formData.get("title") as string,
-      type: formData.get("type") as any,
+      type: formData.get("type") as string,
       url: formData.get("url") as string,
       classId: formData.get("classId") as string,
       subjectId: formData.get("subjectId") as string,
@@ -45,8 +46,11 @@ export async function createMaterial(formData: FormData, teacherId: string) {
 
     revalidatePath("/portal/teacher/materials");
     return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message || "Failed to create material" };
+  } catch (error: unknown) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to create material",
+    };
   }
 }
 
@@ -94,8 +98,11 @@ export async function createAssignment(formData: FormData, teacherId: string) {
 
     revalidatePath("/portal/teacher/assignments");
     return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error: unknown) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to create assignment",
+    };
   }
 }
 
@@ -125,8 +132,11 @@ export async function submitAssignment(formData: FormData, studentId: string) {
 
     revalidatePath("/portal/student/assignments");
     return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error: unknown) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to submit assignment",
+    };
   }
 }
 
@@ -140,6 +150,21 @@ export async function gradeSubmission(submissionId: string, marks: number, total
   try {
     const auth = await requireRoleAction("TEACHER", "SUPER_ADMIN");
     if (!auth.ok) throw new Error(auth.error);
+
+    const submission = await prisma.submission.findUnique({
+      where: { id: submissionId },
+      include: { assignment: true },
+    });
+    if (!submission) throw new Error("Submission not found");
+
+    if (getRoleFromSession(auth.session) === "TEACHER") {
+      const teacher = await prisma.teacher.findFirst({
+        where: { user: { email: auth.session.user?.email ?? "" } },
+      });
+      if (!teacher || submission.assignment.teacherId !== teacher.id) {
+        throw new Error("You can only grade submissions for your own assignments");
+      }
+    }
 
     const validated = GradeSubmissionSchema.parse({ marks, totalMarks, feedback });
     if (validated.marks > validated.totalMarks) throw new Error("Marks cannot exceed Total Marks");
@@ -162,10 +187,24 @@ export async function gradeSubmission(submissionId: string, marks: number, total
       }
     });
 
+    const uid = auth.session.user?.id;
+    if (uid) {
+      await logAudit({
+        userId: uid,
+        action: "GRADE",
+        module: "SUBMISSION",
+        recordId: submissionId,
+        details: `${validated.marks}/${validated.totalMarks} (${grade})`,
+      });
+    }
+
     revalidatePath("/portal/teacher/assignments");
     return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error: unknown) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to grade submission",
+    };
   }
 }
 
@@ -193,6 +232,17 @@ export async function createExamResult(formData: FormData) {
     const validated = ExamResultSchema.parse(data);
     if (validated.marks > validated.totalMarks) throw new Error("Marks cannot exceed total marks");
 
+    if (getRoleFromSession(auth.session) === "TEACHER") {
+      const teacher = await prisma.teacher.findFirst({
+        where: { user: { email: auth.session.user?.email ?? "" } },
+      });
+      if (!teacher) throw new Error("Teacher profile not found");
+      const subject = await prisma.subject.findFirst({
+        where: { id: validated.subjectId, teacherId: teacher.id },
+      });
+      if (!subject) throw new Error("You can only add results for your assigned subjects");
+    }
+
     const percentage = (validated.marks / validated.totalMarks) * 100;
     let grade = "F";
     if (percentage >= 90) grade = "A+";
@@ -215,7 +265,10 @@ export async function createExamResult(formData: FormData) {
 
     revalidatePath("/portal/teacher/exams");
     return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error: unknown) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to create exam result",
+    };
   }
 }

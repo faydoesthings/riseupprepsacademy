@@ -4,8 +4,9 @@ import { useState } from "react";
 import { X, Loader2, Heart } from "lucide-react";
 import { createDonation } from "@/app/actions/donor-actions";
 import toast from "react-hot-toast";
+import type { DonorOption } from "@/lib/form-types";
 
-export default function DonationFormModal({ donors }: any) {
+export default function DonationFormModal({ donors }: { donors: DonorOption[] }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -43,9 +44,9 @@ export default function DonationFormModal({ donors }: any) {
                 <label className="form-label-caps">Select donor <span className="text-[#F78C1F]">*</span></label>
                 <select name="donorId" required className="form-select">
                   <option value="">Choose...</option>
-                  {donors.map((d: any) => (
+                  {donors.map((d) => (
                     <option key={d.id} value={d.id}>
-                      {d.user.name} {d.organizationName ? `(${d.organizationName})` : ""}
+                      {d.user.name}
                     </option>
                   ))}
                 </select>

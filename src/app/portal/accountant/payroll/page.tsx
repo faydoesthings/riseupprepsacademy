@@ -1,63 +1,117 @@
-import { auth } from "@/lib/auth";
+import PortalListPage from "@/components/portal/PortalListPage";
 import prisma from "@/lib/prisma";
 import PageHeader from "@/components/ui/PageHeader";
 import DataTable from "@/components/ui/DataTable";
+import Pagination from "@/components/ui/Pagination";
+import ListPageError from "@/components/ui/ListPageError";
 import PayrollFormModal from "@/components/portal/forms/PayrollFormModal";
-import { redirect } from "next/navigation";
-import { Users, CheckCircle } from "lucide-react";
+import { requirePortalRole } from "@/lib/portal-auth";
+import {
+  buildPayrollListWhere,
+  paginationArgs,
+  parsePageParam,
+  parseSearchParam,
+} from "@/lib/list-query";
+import { Users } from "lucide-react";
+import { formatPKR } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
-export default async function AccountantPayrollPage() {
-  const session = await auth();
-  if (!session?.user?.id) redirect("/login");
+export default async function AccountantPayrollPage({
+  searchParams,
+}: {
+  searchParams: { search?: string; page?: string };
+}) {
+  try {
+    await requirePortalRole("ACCOUNTANT", "SUPER_ADMIN");
+    const search = parseSearchParam(searchParams.search);
+    const page = parsePageParam(searchParams.page);
+    const { skip, take } = paginationArgs(page);
+    const where = buildPayrollListWhere(search);
 
-  const payrolls = await prisma.payroll.findMany({
-    include: { teacher: { include: { user: true } } },
-    orderBy: { processedAt: "desc" }
-  });
+    const [payrolls, total, totalAgg, teachers] = await Promise.all([
+      prisma.payroll.findMany({
+        where,
+        include: { teacher: { include: { user: true } } },
+        orderBy: { processedAt: "desc" },
+        skip,
+        take,
+      }),
+      prisma.payroll.count({ where }),
+      prisma.payroll.aggregate({ where, _sum: { amount: true } }),
+      prisma.teacher.findMany({
+        include: { user: true },
+        where: { status: "ACTIVE" },
+      }),
+    ]);
 
-  const teachers = await prisma.teacher.findMany({
-    include: { user: true },
-    where: { status: "ACTIVE" }
-  });
+    const totalPayroll = totalAgg._sum.amount ?? 0;
 
-  const totalPayroll = payrolls.reduce((sum, p) => sum + p.amount, 0);
-
-  return (
-    <div className="animate-fade-in-up">
-      <div className="flex flex-col md:flex-row justify-between md:items-end gap-4 mb-8">
+    return (
+      <PortalListPage>
         <PageHeader
-          title="Staff Payroll"
+          eyebrow="Accountant portal"
+          title="Staff payroll"
           description="Manage teacher salaries and process monthly payroll."
+          searchPlaceholder="Search payroll records..."
           customAction={<PayrollFormModal teachers={teachers} />}
         />
-        <div className="card-elevated p-4 bg-gradient-to-br from-indigo-800 to-indigo-900 text-white flex items-center gap-4 -mt-8 min-w-[250px]">
-          <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
-            <Users className="w-6 h-6 text-indigo-200" />
-          </div>
-          <div>
-            <p className="text-white/70 text-xs font-medium uppercase tracking-wider mb-1">Total Processed</p>
-            <h3 className="text-2xl font-black">Rs {totalPayroll.toLocaleString()}</h3>
-          </div>
-        </div>
-      </div>
 
-      <DataTable headers={["Teacher", "Period", "Amount", "Processed Date", "Status"]} isEmpty={payrolls.length === 0}>
-        {payrolls.map(p => (
-          <tr key={p.id} className="hover:bg-gray-50">
-            <td className="px-6 py-4 font-bold text-[#05335C]">{p.teacher.user.name}</td>
-            <td className="px-6 py-4 font-medium text-gray-700">{p.month} {p.year}</td>
-            <td className="px-6 py-4 font-bold text-green-600">Rs {p.amount.toLocaleString()}</td>
-            <td className="px-6 py-4 text-sm text-gray-500">{p.processedAt?.toLocaleDateString() || "-"}</td>
-            <td className="px-6 py-4">
-              <span className="flex items-center gap-1 text-xs font-bold text-green-700 bg-green-50 px-2 py-1 rounded w-max">
-                <CheckCircle className="w-3 h-3" /> {p.status}
-              </span>
-            </td>
-          </tr>
-        ))}
-      </DataTable>
-    </div>
-  );
+        <section className="portal-stat-grid" aria-label="Payroll summary">
+          <article className="portal-kpi portal-kpi--neutral">
+            <div className="portal-kpi__icon" aria-hidden>
+              <Users className="w-5 h-5" strokeWidth={2} />
+            </div>
+            <div className="portal-kpi__body">
+              <p className="portal-kpi__label">Total processed</p>
+              <p className="portal-kpi__value portal-kpi__value--text">
+                {formatPKR(totalPayroll)}
+              </p>
+              <p className="portal-kpi__hint">
+                {search ? "Matching current search" : "All payroll records"}
+              </p>
+            </div>
+          </article>
+        </section>
+
+        <DataTable
+          headers={["Teacher", "Period", "Amount", "Processed", "Status"]}
+          isEmpty={payrolls.length === 0}
+          emptyMessage={
+            search ? "No payroll records match your search." : "No payroll processed yet."
+          }
+        >
+          {payrolls.map((payroll) => (
+            <tr key={payroll.id}>
+              <td className="font-bold text-white text-sm">{payroll.teacher.user.name}</td>
+              <td className="font-medium text-white/80 text-sm">
+                {payroll.month} {payroll.year}
+              </td>
+              <td className="font-bold text-[#0ABFBC] text-sm">{formatPKR(payroll.amount)}</td>
+              <td className="text-sm text-white/40">
+                {payroll.processedAt?.toLocaleDateString() ?? "—"}
+              </td>
+              <td>
+                <span className="badge badge-success">{payroll.status}</span>
+              </td>
+            </tr>
+          ))}
+        </DataTable>
+
+        <Pagination
+          page={page}
+          total={total}
+          basePath="/portal/accountant/payroll"
+          searchParams={{ search: search || undefined }}
+        />
+      </PortalListPage>
+    );
+  } catch (error) {
+    console.error("AccountantPayrollPage:", error);
+    return (
+      <PortalListPage>
+        <ListPageError />
+      </PortalListPage>
+    );
+  }
 }

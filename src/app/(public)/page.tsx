@@ -4,6 +4,11 @@ import { getPublicStats } from "@/lib/stats";
 export const dynamic = "force-dynamic";
 
 export default async function Page() {
-  const stats = await getPublicStats();
+  let stats;
+  try {
+    stats = await getPublicStats();
+  } catch (error) {
+    console.error("Homepage stats unavailable:", error);
+  }
   return <HomePage stats={stats} />;
 }

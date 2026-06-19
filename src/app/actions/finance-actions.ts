@@ -3,6 +3,7 @@
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { requireRoleAction } from "@/lib/auth-utils";
+import { logAudit } from "@/lib/audit-log";
 import { z } from "zod";
 
 const FeeStructureSchema = z.object({
@@ -21,14 +22,14 @@ export async function createFeeStructure(formData: FormData) {
     const data = {
       name: formData.get("name") as string,
       amount: parseFloat(formData.get("amount") as string),
-      frequency: formData.get("frequency") as any,
+      frequency: formData.get("frequency") as string,
       classId: formData.get("classId") as string || undefined,
       studentId: formData.get("studentId") as string || undefined,
     };
 
     const validated = FeeStructureSchema.parse(data);
 
-    await prisma.feeStructure.create({
+    const created = await prisma.feeStructure.create({
       data: {
         name: validated.name,
         amount: validated.amount,
@@ -38,10 +39,24 @@ export async function createFeeStructure(formData: FormData) {
       }
     });
 
+    const uid = auth.session.user?.id;
+    if (uid) {
+      await logAudit({
+        userId: uid,
+        action: "CREATE",
+        module: "FEE_STRUCTURE",
+        recordId: created.id,
+        details: validated.name,
+      });
+    }
+
     revalidatePath("/portal/accountant/fees");
     return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error: unknown) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to create fee structure",
+    };
   }
 }
 
@@ -62,13 +77,28 @@ export async function collectFee(formData: FormData) {
       studentId: formData.get("studentId") as string,
       feeStructureId: formData.get("feeStructureId") as string,
       amount: parseFloat(formData.get("amount") as string),
-      method: formData.get("method") as any,
+      method: formData.get("method") as string,
       month: formData.get("month") as string,
     };
 
     const validated = CollectFeeSchema.parse(data);
 
-    await prisma.feePayment.create({
+    const duplicate = await prisma.feePayment.findFirst({
+      where: {
+        studentId: validated.studentId,
+        feeStructureId: validated.feeStructureId,
+        month: validated.month,
+        status: { in: ["CONFIRMED", "PENDING"] },
+      },
+    });
+    if (duplicate) {
+      return {
+        success: false,
+        error: "A fee record for this student, plan, and month already exists",
+      };
+    }
+
+    const payment = await prisma.feePayment.create({
       data: {
         studentId: validated.studentId,
         feeStructureId: validated.feeStructureId,
@@ -80,10 +110,24 @@ export async function collectFee(formData: FormData) {
       }
     });
 
+    const uid = auth.session.user?.id;
+    if (uid) {
+      await logAudit({
+        userId: uid,
+        action: "COLLECT",
+        module: "FEE_PAYMENT",
+        recordId: payment.id,
+        details: `${validated.month} — PKR ${validated.amount}`,
+      });
+    }
+
     revalidatePath("/portal/accountant/fees");
     return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error: unknown) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to collect fee",
+    };
   }
 }
 
@@ -113,7 +157,7 @@ export async function createExpense(formData: FormData, userId: string) {
 
     const validated = ExpenseSchema.parse(data);
 
-    await prisma.expense.create({
+    const expense = await prisma.expense.create({
       data: {
         category: validated.category,
         amount: validated.amount,
@@ -123,10 +167,21 @@ export async function createExpense(formData: FormData, userId: string) {
       }
     });
 
+    await logAudit({
+      userId: actualUserId,
+      action: "CREATE",
+      module: "EXPENSE",
+      recordId: expense.id,
+      details: `${validated.category} — PKR ${validated.amount}`,
+    });
+
     revalidatePath("/portal/accountant/expenses");
     return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error: unknown) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to create expense",
+    };
   }
 }
 
@@ -151,7 +206,21 @@ export async function processPayroll(formData: FormData) {
 
     const validated = PayrollSchema.parse(data);
 
-    await prisma.payroll.create({
+    const existingPayroll = await prisma.payroll.findFirst({
+      where: {
+        teacherId: validated.teacherId,
+        month: validated.month,
+        year: validated.year,
+      },
+    });
+    if (existingPayroll) {
+      return {
+        success: false,
+        error: "Payroll for this teacher and month has already been processed",
+      };
+    }
+
+    const payroll = await prisma.payroll.create({
       data: {
         teacherId: validated.teacherId,
         month: validated.month,
@@ -162,9 +231,23 @@ export async function processPayroll(formData: FormData) {
       }
     });
 
+    const uid = auth.session.user?.id;
+    if (uid) {
+      await logAudit({
+        userId: uid,
+        action: "PROCESS",
+        module: "PAYROLL",
+        recordId: payroll.id,
+        details: `${validated.month} ${validated.year} — PKR ${validated.amount}`,
+      });
+    }
+
     revalidatePath("/portal/accountant/payroll");
     return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error: unknown) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to process payroll",
+    };
   }
 }

@@ -18,23 +18,54 @@ interface AttendanceMarkerProps {
   dateString: string;
   teacherId: string;
   students: StudentData[];
+  periodLabel?: string;
+  isToday?: boolean;
+  alreadyMarkedCount?: number;
+  lastMarkedAt?: string;
 }
 
-export default function AttendanceMarker({ periodId, dateString, teacherId, students }: AttendanceMarkerProps) {
+const statusOptions: Array<{
+  value: StatusType;
+  label: string;
+  shortLabel: string;
+  icon: typeof CheckCircle;
+  tone: "present" | "late" | "absent";
+}> = [
+  { value: "PRESENT", label: "Present", shortLabel: "P", icon: CheckCircle, tone: "present" },
+  { value: "LATE", label: "Late", shortLabel: "L", icon: Clock, tone: "late" },
+  { value: "ABSENT", label: "Absent", shortLabel: "A", icon: XCircle, tone: "absent" },
+];
+
+export default function AttendanceMarker({
+  periodId,
+  dateString,
+  teacherId,
+  students,
+  periodLabel,
+  isToday = false,
+  alreadyMarkedCount = 0,
+  lastMarkedAt,
+}: AttendanceMarkerProps) {
   const [attendance, setAttendance] = useState<Record<string, StatusType>>(() => {
     const initial: Record<string, StatusType> = {};
-    students.forEach(s => {
-      initial[s.id] = s.existingStatus || "PRESENT"; // Default all to present to speed up
+    students.forEach((s) => {
+      initial[s.id] = s.existingStatus || "PRESENT";
     });
     return initial;
   });
-  
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
 
+  const counts = {
+    present: Object.values(attendance).filter((s) => s === "PRESENT").length,
+    absent: Object.values(attendance).filter((s) => s === "ABSENT").length,
+    late: Object.values(attendance).filter((s) => s === "LATE").length,
+  };
+
   const handleStatusChange = (studentId: string, status: StatusType) => {
-    setAttendance(prev => ({ ...prev, [studentId]: status }));
+    setAttendance((prev) => ({ ...prev, [studentId]: status }));
   };
 
   const onSubmit = async () => {
@@ -44,109 +75,138 @@ export default function AttendanceMarker({ periodId, dateString, teacherId, stud
 
     const records = Object.entries(attendance).map(([studentId, status]) => ({
       studentId,
-      status
+      status,
     }));
 
     const result = await submitAttendance(periodId, dateString, records, teacherId);
-    
+
     if (result.success) {
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
     } else {
       setError(result.error || "Failed to submit attendance");
     }
-    
+
     setIsSubmitting(false);
   };
 
+  const formattedDate = new Date(dateString).toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+
   return (
-    <div className="card-elevated overflow-hidden">
-      <div className="bg-[#F8FAFC] px-6 py-4 border-b border-gray-100 flex justify-between items-center">
-        <div>
-          <h3 className="font-bold text-[#05335C]">Mark Attendance</h3>
-          <p className="text-sm text-gray-500">For {new Date(dateString).toLocaleDateString()}</p>
-        </div>
-        <div className="flex items-center gap-4 text-sm font-medium">
-          <span className="text-green-600">Present: {Object.values(attendance).filter(s => s === "PRESENT").length}</span>
-          <span className="text-red-600">Absent: {Object.values(attendance).filter(s => s === "ABSENT").length}</span>
-          <span className="text-orange-500">Late: {Object.values(attendance).filter(s => s === "LATE").length}</span>
-        </div>
-      </div>
-
-      <div className="overflow-x-auto">
-        <table className="w-full text-left">
-          <thead>
-            <tr className="bg-white border-b border-gray-100">
-              <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Student Name</th>
-              <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Roll No</th>
-              <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase text-right">Status</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-50">
-            {students.map(student => (
-              <tr key={student.id} className="hover:bg-gray-50/50">
-                <td className="px-6 py-4 font-medium text-[#05335C]">{student.name}</td>
-                <td className="px-6 py-4 text-sm text-gray-500">{student.rollNumber || "-"}</td>
-                <td className="px-6 py-4 text-right">
-                  <div className="inline-flex rounded-lg bg-gray-100 p-1">
-                    <button
-                      onClick={() => handleStatusChange(student.id, "PRESENT")}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                        attendance[student.id] === "PRESENT" 
-                          ? "bg-white text-green-700 shadow-sm" 
-                          : "text-gray-500 hover:text-green-600"
-                      }`}
-                    >
-                      <CheckCircle className="w-3.5 h-3.5" /> Present
-                    </button>
-                    <button
-                      onClick={() => handleStatusChange(student.id, "LATE")}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                        attendance[student.id] === "LATE" 
-                          ? "bg-white text-orange-600 shadow-sm" 
-                          : "text-gray-500 hover:text-orange-500"
-                      }`}
-                    >
-                      <Clock className="w-3.5 h-3.5" /> Late
-                    </button>
-                    <button
-                      onClick={() => handleStatusChange(student.id, "ABSENT")}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                        attendance[student.id] === "ABSENT" 
-                          ? "bg-white text-red-600 shadow-sm" 
-                          : "text-gray-500 hover:text-red-600"
-                      }`}
-                    >
-                      <XCircle className="w-3.5 h-3.5" /> Absent
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {students.length === 0 && (
-              <tr>
-                <td colSpan={3} className="px-6 py-8 text-center text-gray-500">
-                  No students found in this class.
-                </td>
-              </tr>
+    <section className="portal-attendance-marker portal-panel">
+      <header className="portal-attendance-marker__header">
+        <div className="portal-attendance-marker__intro">
+          <div className="portal-attendance-marker__date-row">
+            <span className="portal-attendance-marker__date-chip">{formattedDate}</span>
+            {isToday && (
+              <span className="portal-attendance-marker__today-pill">Today</span>
             )}
-          </tbody>
-        </table>
-      </div>
+          </div>
+          <h3 className="portal-attendance-marker__title">Mark attendance</h3>
+          {periodLabel && (
+            <p className="portal-attendance-marker__period">{periodLabel}</p>
+          )}
+          {alreadyMarkedCount > 0 && (
+            <p className="portal-attendance-marker__saved">
+              {alreadyMarkedCount} of {students.length} students already marked for this date
+              {lastMarkedAt
+                ? ` · Last saved ${new Date(lastMarkedAt).toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}`
+                : ""}
+            </p>
+          )}
+        </div>
 
-      <div className="p-6 border-t border-gray-100 bg-[#F8FAFC] flex justify-between items-center">
-        <div>
-          {error && <span className="text-red-600 text-sm">{error}</span>}
-          {success && <span className="text-green-600 text-sm font-medium">Attendance successfully recorded!</span>}
+        <div className="portal-attendance-marker__stats" aria-label="Attendance summary">
+          <span className="portal-attendance-stat portal-attendance-stat--present">
+            Present <strong>{counts.present}</strong>
+          </span>
+          <span className="portal-attendance-stat portal-attendance-stat--late">
+            Late <strong>{counts.late}</strong>
+          </span>
+          <span className="portal-attendance-stat portal-attendance-stat--absent">
+            Absent <strong>{counts.absent}</strong>
+          </span>
+        </div>
+      </header>
+
+      {students.length === 0 ? (
+        <div className="portal-attendance-marker__empty">
+          <p>No students found in this class.</p>
+        </div>
+      ) : (
+        <ul className="portal-attendance-marker__list">
+          {students.map((student) => (
+            <li key={student.id} className="portal-attendance-row">
+              <div className="portal-attendance-row__student">
+                <p className="portal-attendance-row__name">{student.name}</p>
+                <p className="portal-attendance-row__roll">
+                  Roll no. {student.rollNumber || "—"}
+                </p>
+              </div>
+
+              <div
+                className="portal-attendance-row__toggle"
+                role="group"
+                aria-label={`Attendance status for ${student.name}`}
+              >
+                {statusOptions.map((option) => {
+                  const Icon = option.icon;
+                  const isActive = attendance[student.id] === option.value;
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => handleStatusChange(student.id, option.value)}
+                      className={`portal-attendance-toggle portal-attendance-toggle--${option.tone} ${
+                        isActive ? "is-active" : ""
+                      }`}
+                      aria-pressed={isActive}
+                    >
+                      <Icon className="w-3.5 h-3.5 shrink-0" aria-hidden />
+                      <span className="portal-attendance-toggle__label">{option.label}</span>
+                      <span className="portal-attendance-toggle__short" aria-hidden>
+                        {option.shortLabel}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <footer className="portal-attendance-marker__footer">
+        <div className="portal-attendance-marker__feedback">
+          {error && <p className="portal-attendance-marker__error">{error}</p>}
+          {success && (
+            <p className="portal-attendance-marker__success">Attendance saved successfully.</p>
+          )}
         </div>
         <button
+          type="button"
           onClick={onSubmit}
           disabled={isSubmitting || students.length === 0}
-          className="btn btn-primary disabled:opacity-70"
+          className="portal-btn portal-btn--primary min-h-[44px] disabled:opacity-70 portal-attendance-marker__submit"
         >
-          {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : "Submit Attendance"}
+          {isSubmitting ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" aria-hidden />
+              Saving…
+            </>
+          ) : (
+            "Submit attendance"
+          )}
         </button>
-      </div>
-    </div>
+      </footer>
+    </section>
   );
 }

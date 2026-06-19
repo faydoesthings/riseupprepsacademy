@@ -4,8 +4,15 @@ import { useState } from "react";
 import { X, Loader2, Plus } from "lucide-react";
 import { createExamResult } from "@/app/actions/academic-actions";
 import toast from "react-hot-toast";
+import type { StudentOption, SubjectOption } from "@/lib/form-types";
 
-export default function ExamResultFormModal({ students, subjects }: any) {
+export default function ExamResultFormModal({
+  students,
+  subjects,
+}: {
+  students: StudentOption[];
+  subjects: SubjectOption[];
+}) {
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -46,14 +53,14 @@ export default function ExamResultFormModal({ students, subjects }: any) {
                   <label className="form-label-caps">Student <span className="text-[#F78C1F]">*</span></label>
                   <select name="studentId" required className="form-select">
                     <option value="">Select student</option>
-                    {students.map((s: any) => <option key={s.id} value={s.id}>{s.user.name}</option>)}
+                    {students.map((s) => <option key={s.id} value={s.id}>{s.user.name}</option>)}
                   </select>
                 </div>
                 <div>
                   <label className="form-label-caps">Subject <span className="text-[#F78C1F]">*</span></label>
                   <select name="subjectId" required className="form-select">
                     <option value="">Select subject</option>
-                    {subjects.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                    {subjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
                   </select>
                 </div>
               </div>

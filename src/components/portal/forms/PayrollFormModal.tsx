@@ -4,8 +4,9 @@ import { useState } from "react";
 import { X, Loader2, DollarSign } from "lucide-react";
 import { processPayroll } from "@/app/actions/finance-actions";
 import toast from "react-hot-toast";
+import type { TeacherOption } from "@/lib/form-types";
 
-export default function PayrollFormModal({ teachers }: any) {
+export default function PayrollFormModal({ teachers }: { teachers: TeacherOption[] }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -41,7 +42,7 @@ export default function PayrollFormModal({ teachers }: any) {
                 <label className="form-label-caps">Select teacher <span className="text-[#F78C1F]">*</span></label>
                 <select name="teacherId" required className="form-select">
                   <option value="">Select...</option>
-                  {teachers.map((t: any) => <option key={t.id} value={t.id}>{t.user.name} (Base: Rs {t.salary})</option>)}
+                  {teachers.map((t) => <option key={t.id} value={t.id}>{t.user.name} (Base: Rs {t.salary})</option>)}
                 </select>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

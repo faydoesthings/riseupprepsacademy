@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 import { requireAdminAction, validatePassword } from "@/lib/auth-utils";
+import { logAudit } from "@/lib/audit-log";
 
 export async function createStudent(formData: FormData) {
   const authResult = await requireAdminAction();
@@ -34,8 +35,16 @@ export async function createStudent(formData: FormData) {
       return { success: false, error: "Email already in use" };
     }
 
+    if (rollNumber) {
+      const rollTaken = await prisma.student.findFirst({ where: { rollNumber } });
+      if (rollTaken) {
+        return { success: false, error: "Roll number is already assigned to another student" };
+      }
+    }
+
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    let newStudentId: string | undefined;
     await prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
         data: {
@@ -47,7 +56,7 @@ export async function createStudent(formData: FormData) {
         },
       });
 
-      await tx.student.create({
+      const student = await tx.student.create({
         data: {
           userId: user.id,
           classId: classId || null,
@@ -55,7 +64,19 @@ export async function createStudent(formData: FormData) {
           parentName: parentName || null,
         },
       });
+      newStudentId = student.id;
     });
+
+    const adminId = authResult.session.user?.id;
+    if (adminId) {
+      await logAudit({
+        userId: adminId,
+        action: "CREATE",
+        module: "STUDENT",
+        recordId: newStudentId,
+        details: `${name} (${email})`,
+      });
+    }
 
     revalidatePath("/portal/admin/students");
     return { success: true };

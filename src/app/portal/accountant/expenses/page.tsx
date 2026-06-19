@@ -1,56 +1,105 @@
-import { auth } from "@/lib/auth";
+import PortalListPage from "@/components/portal/PortalListPage";
 import prisma from "@/lib/prisma";
 import PageHeader from "@/components/ui/PageHeader";
 import DataTable from "@/components/ui/DataTable";
+import Pagination from "@/components/ui/Pagination";
+import ListPageError from "@/components/ui/ListPageError";
 import ExpenseFormModal from "@/components/portal/forms/ExpenseFormModal";
-import { redirect } from "next/navigation";
+import { requirePortalRole } from "@/lib/portal-auth";
+import {
+  buildExpenseListWhere,
+  paginationArgs,
+  parsePageParam,
+  parseSearchParam,
+} from "@/lib/list-query";
 import { Wallet } from "lucide-react";
+import { formatPKR } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
-export default async function AccountantExpensesPage() {
-  const session = await auth();
-  if (!session?.user?.id) redirect("/login");
+export default async function AccountantExpensesPage({
+  searchParams,
+}: {
+  searchParams: { search?: string; page?: string };
+}) {
+  try {
+    const session = await requirePortalRole("ACCOUNTANT", "SUPER_ADMIN");
+    const search = parseSearchParam(searchParams.search);
+    const page = parsePageParam(searchParams.page);
+    const { skip, take } = paginationArgs(page);
+    const where = buildExpenseListWhere(search);
 
-  const expenses = await prisma.expense.findMany({
-    orderBy: { date: "desc" }
-  });
+    const [expenses, total, totalAgg] = await Promise.all([
+      prisma.expense.findMany({
+        where,
+        orderBy: { date: "desc" },
+        skip,
+        take,
+      }),
+      prisma.expense.count({ where }),
+      prisma.expense.aggregate({ where, _sum: { amount: true } }),
+    ]);
 
-  const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
+    const totalExpenses = totalAgg._sum.amount ?? 0;
 
-  return (
-    <div className="animate-fade-in-up">
-      <div className="flex flex-col md:flex-row justify-between md:items-end gap-4 mb-8">
+    return (
+      <PortalListPage>
         <PageHeader
-          title="Expense Register"
+          eyebrow="Accountant portal"
+          title="Expense register"
           description="Log and monitor academy expenditures and operational costs."
-          customAction={<ExpenseFormModal userId={session.user.id} />}
+          searchPlaceholder="Search expenses..."
+          customAction={<ExpenseFormModal userId={session.user?.id ?? ""} />}
         />
-        <div className="card-elevated p-4 bg-gradient-to-br from-[#05335C] to-[#0A4A82] text-white flex items-center gap-4 -mt-8 min-w-[250px]">
-          <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
-            <Wallet className="w-6 h-6 text-[#F78C1F]" />
-          </div>
-          <div>
-            <p className="text-white/70 text-xs font-medium uppercase tracking-wider mb-1">Total Expenditures</p>
-            <h3 className="text-2xl font-black">Rs {totalExpenses.toLocaleString()}</h3>
-          </div>
-        </div>
-      </div>
 
-      <DataTable headers={["Date", "Category", "Description", "Amount"]} isEmpty={expenses.length === 0}>
-        {expenses.map(e => (
-          <tr key={e.id} className="hover:bg-gray-50">
-            <td className="px-6 py-4 text-sm text-gray-600">{e.date.toLocaleDateString()}</td>
-            <td className="px-6 py-4">
-              <span className="text-xs font-bold px-2 py-1 bg-gray-100 text-gray-700 rounded uppercase tracking-wider">
-                {e.category}
-              </span>
-            </td>
-            <td className="px-6 py-4 font-medium text-[#05335C]">{e.description || "-"}</td>
-            <td className="px-6 py-4 font-bold text-red-600">Rs {e.amount.toLocaleString()}</td>
-          </tr>
-        ))}
-      </DataTable>
-    </div>
-  );
+        <section className="portal-stat-grid" aria-label="Expense summary">
+          <article className="portal-kpi portal-kpi--orange">
+            <div className="portal-kpi__icon" aria-hidden>
+              <Wallet className="w-5 h-5" strokeWidth={2} />
+            </div>
+            <div className="portal-kpi__body">
+              <p className="portal-kpi__label">Total (filtered)</p>
+              <p className="portal-kpi__value portal-kpi__value--text">
+                {formatPKR(totalExpenses)}
+              </p>
+              <p className="portal-kpi__hint">
+                {search ? "Matching current search" : "All recorded expenses"}
+              </p>
+            </div>
+          </article>
+        </section>
+
+        <DataTable
+          headers={["Date", "Category", "Description", "Amount"]}
+          isEmpty={expenses.length === 0}
+          emptyMessage={search ? "No expenses match your search." : "No expenses logged yet."}
+        >
+          {expenses.map((expense) => (
+            <tr key={expense.id}>
+              <td className="text-sm text-white/70">{expense.date.toLocaleDateString()}</td>
+              <td>
+                <span className="badge badge-navy text-xs">{expense.category}</span>
+              </td>
+              <td className="font-medium text-white text-sm">{expense.description || "—"}</td>
+              <td className="font-bold text-[#C0392B] text-sm">{formatPKR(expense.amount)}</td>
+            </tr>
+          ))}
+        </DataTable>
+
+        <Pagination
+          page={page}
+          total={total}
+          basePath="/portal/accountant/expenses"
+          searchParams={{ search: search || undefined }}
+        />
+      </PortalListPage>
+    );
+  } catch (error) {
+    console.error("AccountantExpensesPage:", error);
+    return (
+      <PortalListPage>
+        <ListPageError />
+      </PortalListPage>
+    );
+  }
 }

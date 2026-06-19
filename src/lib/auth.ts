@@ -31,12 +31,31 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         if (!isValid) return null;
 
+        let profileStatus = "ACTIVE";
+        if (user.role === "STUDENT") {
+          const student = await prisma.student.findUnique({
+            where: { userId: user.id },
+            select: { status: true },
+          });
+          if (!student || student.status !== "ACTIVE") return null;
+          profileStatus = student.status;
+        } else if (user.role === "TEACHER") {
+          const teacher = await prisma.teacher.findUnique({
+            where: { userId: user.id },
+            select: { status: true },
+          });
+          if (!teacher || teacher.status !== "ACTIVE") return null;
+          profileStatus = teacher.status;
+        }
+
         return {
           id: user.id,
           email: user.email,
           name: user.name,
           role: user.role,
           image: user.image,
+          accountStatus: user.status,
+          profileStatus,
         };
       },
     }),

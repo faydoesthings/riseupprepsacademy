@@ -40,7 +40,7 @@ export default function BrandLogo({
         width={200}
         height={64}
         priority={priority}
-        className={cn("h-10 w-auto sm:h-11", className)}
+        className={cn("h-11 w-auto sm:h-12", className)}
       />
     );
 

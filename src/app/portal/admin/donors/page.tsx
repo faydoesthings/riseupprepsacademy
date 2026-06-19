@@ -1,106 +1,173 @@
-import { auth } from "@/lib/auth";
+import PortalListPage from "@/components/portal/PortalListPage";
 import prisma from "@/lib/prisma";
 import PageHeader from "@/components/ui/PageHeader";
 import DataTable from "@/components/ui/DataTable";
+import Pagination from "@/components/ui/Pagination";
+import ListPageError from "@/components/ui/ListPageError";
 import DonationFormModal from "@/components/portal/forms/DonationFormModal";
 import SponsorshipFormModal from "@/components/portal/forms/SponsorshipFormModal";
-import { redirect } from "next/navigation";
+import { requirePortalRole } from "@/lib/portal-auth";
+import {
+  buildDonationListWhere,
+  paginationArgs,
+  parsePageParam,
+  parseSearchParam,
+} from "@/lib/list-query";
 import { HeartHandshake, Gift, Users } from "lucide-react";
+import { formatPKR } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminDonorsPage() {
-  const session = await auth();
-  if (!session?.user?.id) redirect("/login");
+export default async function AdminDonorsPage({
+  searchParams,
+}: {
+  searchParams: { search?: string; page?: string };
+}) {
+  try {
+    await requirePortalRole("SUPER_ADMIN");
+    const search = parseSearchParam(searchParams.search);
+    const page = parsePageParam(searchParams.page);
+    const { skip, take } = paginationArgs(page);
+    const donationWhere = buildDonationListWhere(search);
 
-  const donors = await prisma.donor.findMany({
-    include: { user: true }
-  });
+    const [
+      donors,
+      donations,
+      donationTotal,
+      totalDonationsAgg,
+      sponsorships,
+      students,
+    ] = await Promise.all([
+      prisma.donor.findMany({ include: { user: true } }),
+      prisma.donation.findMany({
+        where: donationWhere,
+        include: { donor: { include: { user: true } } },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take,
+      }),
+      prisma.donation.count({ where: donationWhere }),
+      prisma.donation.aggregate({
+        where: { status: "CONFIRMED" },
+        _sum: { amount: true },
+      }),
+      prisma.student.findMany({
+        where: { isSponsored: true, sponsorId: { not: null } },
+        include: {
+          sponsor: { include: { user: true } },
+          user: true,
+          class: true,
+        },
+        orderBy: { updatedAt: "desc" },
+        take: 20,
+      }),
+      prisma.student.findMany({
+        include: { user: true, class: true },
+        where: { status: "ACTIVE", isSponsored: false },
+        take: 200,
+      }),
+    ]);
 
-  const donations = await prisma.donation.findMany({
-    include: { donor: { include: { user: true } } },
-    orderBy: { createdAt: "desc" }
-  });
+    const totalDonations = totalDonationsAgg._sum.amount ?? 0;
 
-  const sponsorships = await prisma.student.findMany({
-    where: { isSponsored: true, sponsorId: { not: null } },
-    include: { 
-      sponsor: { include: { user: true } },
-      user: true, 
-      class: true 
-    },
-    orderBy: { updatedAt: "desc" }
-  });
-
-  const students = await prisma.student.findMany({
-    include: { user: true, class: true },
-    where: { status: "ACTIVE", isSponsored: false }
-  });
-
-  const totalDonations = donations.reduce((sum, d) => sum + d.amount, 0);
-
-  return (
-    <div className="animate-fade-in-up">
-      <div className="flex flex-col lg:flex-row justify-between lg:items-end gap-6 mb-8">
+    return (
+      <PortalListPage>
         <PageHeader
-          title="Donor Management"
+          title="Donors"
           description="Track donations, manage philanthropic relations, and link sponsors to students."
+          searchPlaceholder="Search donations..."
+          customAction={
+            <div className="flex flex-col sm:flex-row gap-2">
+              <DonationFormModal donors={donors} />
+              <SponsorshipFormModal donors={donors} students={students} />
+            </div>
+          }
         />
-        
-        <div className="flex items-center gap-4 -mt-8">
-          <div className="card-elevated p-4 bg-red-50 border-red-100 min-w-[200px]">
-            <p className="text-red-700 text-xs font-bold uppercase tracking-wider mb-1 flex items-center gap-1">
-              <HeartHandshake className="w-4 h-4" /> Total Funds Raised
-            </p>
-            <h3 className="text-2xl font-black text-red-700">Rs {totalDonations.toLocaleString()}</h3>
-          </div>
-          <div className="flex flex-col gap-2">
-            <DonationFormModal donors={donors} />
-            <SponsorshipFormModal donors={donors} students={students} />
-          </div>
-        </div>
-      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div>
-          <h3 className="text-lg font-bold text-[#05335C] mb-4 flex items-center gap-2">
-            <Gift className="w-5 h-5 text-[#F78C1F]" /> Recent Donations
-          </h3>
-          <DataTable headers={["Donor", "Amount", "Type", "Date"]} isEmpty={donations.length === 0}>
-            {donations.map(d => (
-              <tr key={d.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4">
-                  <div className="font-bold text-[#05335C]">{d.donor.user.name}</div>
-                </td>
-                <td className="px-6 py-4 font-bold text-red-600">Rs {d.amount.toLocaleString()}</td>
-                <td className="px-6 py-4">
-                  <span className="text-xs font-semibold px-2 py-1 bg-gray-100 text-gray-700 rounded-full">
-                    {d.type}
-                  </span>
-                </td>
-                <td className="px-6 py-4 text-sm text-gray-500">{d.createdAt.toLocaleDateString()}</td>
-              </tr>
-            ))}
-          </DataTable>
-        </div>
+        <section className="portal-stat-grid" aria-label="Donor summary">
+          <article className="portal-kpi portal-kpi--orange">
+            <div className="portal-kpi__icon" aria-hidden>
+              <HeartHandshake className="w-5 h-5" strokeWidth={2} />
+            </div>
+            <div className="portal-kpi__body">
+              <p className="portal-kpi__label">Total funds raised</p>
+              <p className="portal-kpi__value">{formatPKR(totalDonations)}</p>
+            </div>
+          </article>
+        </section>
 
-        <div>
-          <h3 className="text-lg font-bold text-[#05335C] mb-4 flex items-center gap-2">
-            <Users className="w-5 h-5 text-blue-500" /> Active Sponsorships
-          </h3>
-          <DataTable headers={["Sponsor", "Student", "Grade"]} isEmpty={sponsorships.length === 0}>
-            {sponsorships.map(s => (
-              <tr key={s.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 font-bold text-[#05335C]">{s.sponsor?.user.name}</td>
-                <td className="px-6 py-4">
-                  <div className="font-medium text-gray-800">{s.user.name}</div>
-                </td>
-                <td className="px-6 py-4 text-xs text-gray-500">{s.class?.grade || 'No Class'}</td>
-              </tr>
-            ))}
-          </DataTable>
+        <div className="portal-settings-grid">
+          <section className="portal-list-section">
+            <h2 className="portal-list-section__title">
+              <span className="portal-list-section__badge">
+                <Gift className="w-4 h-4" aria-hidden />
+              </span>
+              Recent donations
+            </h2>
+            <DataTable
+              headers={["Donor", "Amount", "Type", "Date"]}
+              isEmpty={donations.length === 0}
+              emptyMessage={
+                search ? "No donations match your search." : "No donations recorded yet."
+              }
+            >
+              {donations.map((d) => (
+                <tr key={d.id}>
+                  <td className="font-bold text-white text-sm">{d.donor.user.name}</td>
+                  <td className="font-bold text-[#0ABFBC] text-sm">
+                    {formatPKR(d.amount)}
+                  </td>
+                  <td>
+                    <span className="text-xs font-semibold px-2 py-1 bg-white/5 text-white/60 rounded-full">
+                      {d.type}
+                    </span>
+                  </td>
+                  <td className="text-sm text-white/40">
+                    {d.createdAt.toLocaleDateString()}
+                  </td>
+                </tr>
+              ))}
+            </DataTable>
+            <Pagination
+              page={page}
+              total={donationTotal}
+              basePath="/portal/admin/donors"
+              searchParams={{ search: search || undefined }}
+            />
+          </section>
+
+          <section className="portal-list-section">
+            <h2 className="portal-list-section__title">
+              <span className="portal-list-section__badge">
+                <Users className="w-4 h-4" aria-hidden />
+              </span>
+              Active sponsorships
+            </h2>
+            <DataTable
+              headers={["Sponsor", "Student", "Grade"]}
+              isEmpty={sponsorships.length === 0}
+              emptyMessage="No active sponsorships yet."
+            >
+              {sponsorships.map((s) => (
+                <tr key={s.id}>
+                  <td className="font-bold text-white text-sm">{s.sponsor?.user.name}</td>
+                  <td className="font-medium text-white/80 text-sm">{s.user.name}</td>
+                  <td className="text-xs text-white/40">
+                    {s.class?.grade || "No class"}
+                  </td>
+                </tr>
+              ))}
+            </DataTable>
+          </section>
         </div>
-      </div>
-    </div>
-  );
+      </PortalListPage>
+    );
+  } catch (error) {
+    console.error("AdminDonorsPage:", error);
+    return (
+      <PortalListPage>
+        <ListPageError />
+      </PortalListPage>
+    );
+  }
 }

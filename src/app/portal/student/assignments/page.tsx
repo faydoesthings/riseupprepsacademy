@@ -1,113 +1,206 @@
-import { auth } from "@/lib/auth";
+import PortalListPage from "@/components/portal/PortalListPage";
 import prisma from "@/lib/prisma";
 import PageHeader from "@/components/ui/PageHeader";
 import SubmissionFormModal from "@/components/portal/forms/SubmissionFormModal";
+import ListPageError from "@/components/ui/ListPageError";
+import SubjectFilterNav from "@/components/portal/student/SubjectFilterNav";
+import StudentClassMissing from "@/components/portal/student/StudentClassMissing";
+import StudentProfileMissing from "@/components/portal/student/StudentProfileMissing";
 import { ExternalLink, CheckCircle, Clock } from "lucide-react";
-import { redirect } from "next/navigation";
+import { requirePortalRole } from "@/lib/portal-auth";
+import { getStudentForPortal, parseSubjectParam } from "@/lib/student-portal";
 
 export const dynamic = "force-dynamic";
 
-export default async function StudentAssignmentsPage() {
-  const session = await auth();
-  if (!session?.user?.email) redirect("/login");
+export default async function StudentAssignmentsPage({
+  searchParams,
+}: {
+  searchParams: { subject?: string };
+}) {
+  try {
+    const session = await requirePortalRole("STUDENT");
+    const student = await getStudentForPortal(session.user?.email ?? "");
+    if (!student) return <StudentProfileMissing />;
+    if (!student.classId) {
+      return (
+        <StudentClassMissing
+          title="Assignments"
+          description="View homework, submit your work, and check your grades."
+        />
+      );
+    }
 
-  const student = await prisma.student.findFirst({
-    where: { user: { email: session.user.email } },
-  });
+    const subjects = student.class?.subjects ?? [];
+    const subjectId = parseSubjectParam(searchParams.subject);
+    const selectedSubject = subjects.find((s) => s.id === subjectId);
 
-  if (!student || !student.classId) return <div className="p-8 text-center text-red-600">You must be assigned to a class to view assignments.</div>;
+    const assignments = await prisma.assignment.findMany({
+      where: {
+        classId: student.classId,
+        ...(subjectId ? { subjectId } : {}),
+      },
+      include: {
+        subject: true,
+        teacher: { include: { user: true } },
+        submissions: { where: { studentId: student.id } },
+      },
+      orderBy: { dueDate: "asc" },
+    });
 
-  const assignments = await prisma.assignment.findMany({
-    where: { classId: student.classId },
-    include: { 
-      subject: true,
-      teacher: { include: { user: true } },
-      submissions: { where: { studentId: student.id } }
-    },
-    orderBy: { dueDate: "asc" }
-  });
+    const counts = await prisma.assignment.groupBy({
+      by: ["subjectId"],
+      where: { classId: student.classId },
+      _count: { _all: true },
+    });
+    const countMap = Object.fromEntries(
+      counts.map((row) => [row.subjectId, row._count._all])
+    );
 
-  return (
-    <div className="animate-fade-in-up">
-      <PageHeader
-        title="My Assignments"
-        description="View your homework, submit your work, and check your grades."
-      />
+    return (
+      <PortalListPage>
+        <PageHeader
+          eyebrow="Student portal"
+          title="Assignments"
+          description={
+            selectedSubject
+              ? `Homework and tasks for ${selectedSubject.name}.`
+              : "View homework, submit your work, and check your grades."
+          }
+        />
 
-      <div className="space-y-6">
-        {assignments.map(a => {
-          const submission = a.submissions[0];
-          const isSubmitted = !!submission;
-          const isOverdue = new Date() > new Date(a.dueDate) && !isSubmitted;
+        <div className="portal-subject-layout">
+          <aside className="portal-panel portal-subject-layout__sidebar">
+            <SubjectFilterNav
+              subjects={subjects}
+              basePath="/portal/student/assignments"
+              currentSubjectId={subjectId}
+              counts={countMap}
+            />
+          </aside>
 
-          return (
-            <div key={a.id} className="card-elevated p-0 overflow-hidden flex flex-col md:flex-row">
-              {/* Left Details */}
-              <div className="p-6 flex-1 border-b md:border-b-0 md:border-r border-gray-100">
-                <div className="flex items-center gap-3 mb-2">
-                  <span className="text-xs font-bold uppercase tracking-wider text-[#F78C1F] bg-[#F78C1F]/10 px-2 py-1 rounded">
-                    {a.subject.name}
-                  </span>
-                  <span className={`flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded ${
-                    isSubmitted ? "text-green-700 bg-green-50" : 
-                    isOverdue ? "text-red-700 bg-red-50" : "text-blue-700 bg-blue-50"
-                  }`}>
-                    {isSubmitted ? <CheckCircle className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
-                    {isSubmitted ? "Submitted" : `Due ${a.dueDate.toLocaleDateString()}`}
-                  </span>
-                </div>
-                
-                <h3 className="text-lg font-bold text-[#05335C] mb-2">{a.title}</h3>
-                <p className="text-gray-600 text-sm mb-4">{a.description}</p>
-                
-                <div className="flex items-center gap-4 text-xs text-gray-500">
-                  <span>Assigned by: {a.teacher.user.name}</span>
-                  {a.fileUrl && (
-                    <a href={a.fileUrl} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline flex items-center gap-1">
-                      Resource Link <ExternalLink className="w-3 h-3" />
-                    </a>
-                  )}
-                </div>
+          <div className="portal-subject-layout__main space-y-4">
+            {assignments.length === 0 ? (
+              <div className="portal-empty-state portal-empty-state--inline">
+                <h3 className="text-lg font-bold text-white mb-2">No assignments</h3>
+                <p className="text-white/45 text-sm">
+                  {selectedSubject
+                    ? `No assignments for ${selectedSubject.name} right now.`
+                    : "You're all caught up for now."}
+                </p>
               </div>
+            ) : (
+              assignments.map((assignment) => {
+                const submission = assignment.submissions[0];
+                const isSubmitted = !!submission;
+                const isOverdue = new Date() > new Date(assignment.dueDate) && !isSubmitted;
 
-              {/* Right Action / Status */}
-              <div className="p-6 md:w-64 bg-gray-50 flex flex-col justify-center items-center text-center">
-                {isSubmitted ? (
-                  <div className="space-y-2 w-full">
-                    <p className="text-xs font-medium text-green-600 mb-2">Work Submitted on {submission.submittedAt.toLocaleDateString()}</p>
-                    {submission.grade ? (
-                      <div className="p-3 bg-white rounded-lg border border-gray-200">
-                        <div className="text-2xl font-black text-[#05335C] mb-1">{submission.marks}</div>
-                        <div className="text-xs font-bold text-gray-400 uppercase">Score / Grade {submission.grade}</div>
-                        {submission.feedback && <p className="text-xs text-gray-600 mt-2 italic">"{submission.feedback}"</p>}
+                return (
+                  <article key={assignment.id} className="portal-assignment-card">
+                    <div className="portal-assignment-card__main">
+                      <div className="flex items-center gap-2 flex-wrap mb-2">
+                        <span className="badge badge-orange text-xs">{assignment.subject.name}</span>
+                        <span
+                          className={`portal-assignment-card__status ${
+                            isSubmitted
+                              ? "portal-assignment-card__status--done"
+                              : isOverdue
+                                ? "portal-assignment-card__status--overdue"
+                                : ""
+                          }`}
+                        >
+                          {isSubmitted ? (
+                            <CheckCircle className="w-3 h-3" aria-hidden />
+                          ) : (
+                            <Clock className="w-3 h-3" aria-hidden />
+                          )}
+                          {isSubmitted
+                            ? "Submitted"
+                            : `Due ${assignment.dueDate.toLocaleDateString()}`}
+                        </span>
                       </div>
-                    ) : (
-                      <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-100 text-yellow-700 text-xs font-medium">
-                        Waiting for Teacher to grade
+
+                      <h3 className="portal-assignment-card__title">{assignment.title}</h3>
+                      {assignment.description && (
+                        <p className="portal-assignment-card__desc">{assignment.description}</p>
+                      )}
+
+                      <div className="portal-assignment-card__meta">
+                        <span>Assigned by {assignment.teacher.user.name}</span>
+                        {assignment.fileUrl && (
+                          <a
+                            href={assignment.fileUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-[#F78C1F] hover:underline inline-flex items-center gap-1"
+                          >
+                            Resource <ExternalLink className="w-3 h-3" aria-hidden />
+                          </a>
+                        )}
                       </div>
-                    )}
-                    <a href={submission.fileUrl || "#"} target="_blank" className="text-xs text-blue-600 hover:underline inline-block mt-2">
-                      View My Submission
-                    </a>
-                  </div>
-                ) : (
-                  <div className="space-y-3 w-full">
-                    {isOverdue && <p className="text-xs font-bold text-red-600">This assignment is overdue!</p>}
-                    <SubmissionFormModal assignmentId={a.id} studentId={student.id} />
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        })}
-        
-        {assignments.length === 0 && (
-          <div className="p-12 text-center border-2 border-dashed border-gray-200 rounded-2xl bg-gray-50/50">
-            <h3 className="text-lg font-bold text-gray-700 mb-2">No Assignments</h3>
-            <p className="text-gray-500">You're all caught up! There are no assignments for your class right now.</p>
+                    </div>
+
+                    <div className="portal-assignment-card__side">
+                      {isSubmitted ? (
+                        <div className="space-y-2 w-full text-center">
+                          <p className="text-xs text-[#0ABFBC]">
+                            Submitted {submission.submittedAt.toLocaleDateString()}
+                          </p>
+                          {submission.grade ? (
+                            <div className="portal-assignment-card__grade">
+                              <div className="portal-assignment-card__grade-value">
+                                {submission.marks}
+                              </div>
+                              <div className="text-xs text-white/40 uppercase">
+                                Grade {submission.grade}
+                              </div>
+                              {submission.feedback && (
+                                <p className="text-xs text-white/50 mt-2 italic">
+                                  &quot;{submission.feedback}&quot;
+                                </p>
+                              )}
+                            </div>
+                          ) : (
+                            <p className="text-xs text-[#F78C1F] p-3 rounded-lg bg-[#F78C1F]/10">
+                              Waiting for teacher to grade
+                            </p>
+                          )}
+                          {submission.fileUrl && (
+                            <a
+                              href={submission.fileUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-xs text-[#F78C1F] hover:underline inline-block"
+                            >
+                              View my submission
+                            </a>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="space-y-3 w-full">
+                          {isOverdue && (
+                            <p className="text-xs font-bold text-[#C0392B] text-center">Overdue</p>
+                          )}
+                          <SubmissionFormModal
+                            assignmentId={assignment.id}
+                            studentId={student.id}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </article>
+                );
+              })
+            )}
           </div>
-        )}
-      </div>
-    </div>
-  );
+        </div>
+      </PortalListPage>
+    );
+  } catch (error) {
+    console.error("StudentAssignmentsPage:", error);
+    return (
+      <PortalListPage>
+        <ListPageError />
+      </PortalListPage>
+    );
+  }
 }

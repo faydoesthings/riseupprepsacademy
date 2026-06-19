@@ -1,11 +1,17 @@
-export function formatPKR(amount: number): string {
-  if (amount >= 1_000_000) {
-    return `PKR ${(amount / 1_000_000).toFixed(1)}M`;
+export function formatPKR(amount: number | null | undefined): string {
+  if (amount == null || Number.isNaN(amount)) {
+    return "PKR 0";
   }
-  if (amount >= 1_000) {
-    return `PKR ${Math.round(amount / 1_000)}K`;
+  const value = amount;
+  const sign = value < 0 ? "-" : "";
+  const abs = Math.abs(value);
+  if (abs >= 1_000_000) {
+    return `${sign}PKR ${(abs / 1_000_000).toFixed(1)}M`;
   }
-  return `PKR ${amount.toLocaleString("en-PK")}`;
+  if (abs >= 1_000) {
+    return `${sign}PKR ${Math.round(abs / 1_000)}K`;
+  }
+  return `${sign}PKR ${abs.toLocaleString("en-PK")}`;
 }
 
 export function formatRole(role: string): string {

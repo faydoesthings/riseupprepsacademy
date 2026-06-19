@@ -47,7 +47,7 @@ async function main() {
     },
   });
 
-  await prisma.user.create({
+  const accountantUser = await prisma.user.create({
     data: {
       name: "Ahmed Khan",
       email: "accountant@riseuppreps.com",
@@ -279,6 +279,44 @@ async function main() {
       { title: "RiseUp Preps Academy Opens Doors to 30 New Students", slug: "riseup-opens-doors-30-students", content: "We are thrilled to announce that RiseUp Preps Academy has welcomed 30 new students this academic year. Our mission to educate Sindh continues with renewed vigor as we expand our programs to serve more communities in Sukkur and Rohri.", excerpt: "RiseUp welcomes 30 new students this academic year.", authorId: adminUser.id, published: true },
       { title: "Annual Science Fair 2026 — A Showcase of Young Talent", slug: "annual-science-fair-2026", content: "Our students showcased incredible projects at the Annual Science Fair 2026. From solar-powered water purifiers to biodegradable packaging, the creativity on display was inspiring.", excerpt: "Students showcase innovative projects at the Annual Science Fair.", authorId: adminUser.id, published: true },
       { title: "Thank You to Our Generous Donors — PKR 900,000 Raised", slug: "thank-you-donors-900k-raised", content: "We extend our heartfelt gratitude to all our donors who have collectively contributed over PKR 900,000 to support our students. Your generosity directly funds tuition, supplies, and programs that change lives.", excerpt: "Our donor community has raised over PKR 900,000.", authorId: adminUser.id, published: true },
+    ],
+  });
+
+  // ==================== NOTIFICATIONS ====================
+  await prisma.notification.createMany({
+    data: [
+      {
+        userId: adminUser.id,
+        title: "Welcome to RiseUp Admin",
+        message: "Your administrator dashboard is ready. Review admissions and fee collection from the sidebar.",
+        type: "INFO",
+      },
+      {
+        userId: accountantUser.id,
+        title: "Finance portal ready",
+        message: "Use Fee Collection, Expenses, and Reports to manage monthly academy finances.",
+        type: "INFO",
+      },
+      {
+        userId: teacher1User.id,
+        title: "Attendance reminder",
+        message: "Please mark attendance for today's classes before end of day.",
+        type: "ATTENDANCE",
+        isRead: false,
+      },
+      {
+        userId: studentUsers[0].id,
+        title: "Fee payment received",
+        message: "Your tuition payment for this month has been confirmed. Thank you!",
+        type: "FEE_REMINDER",
+        isRead: false,
+      },
+      {
+        userId: donor1User.id,
+        title: "Thank you for your support",
+        message: "Your recent donation is making a direct impact on our students.",
+        type: "SUCCESS",
+      },
     ],
   });
 

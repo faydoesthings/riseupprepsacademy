@@ -45,6 +45,22 @@ next-env.d.ts
 # local database
 *.db
 *.db-journal
+/prisma/pg-data/
+
+# user uploads (keep directory structure)
+/public/uploads/avatars/*
+!/public/uploads/avatars/.gitkeep
+
+# local dev artifacts
+site-screenshots/
+ui-screenshots/
+ux-audit-screenshots/
+website-screenshots/
+FINAL_PRODUCT_REVIEW.md
+UX_AUDIT_REPORT.md
+scripts/capture-all-screenshots.mjs
+scripts/debug-login.mjs
+scripts/ux-audit-screenshots.mjs
 
 # editor / tooling
 .understand-anything/

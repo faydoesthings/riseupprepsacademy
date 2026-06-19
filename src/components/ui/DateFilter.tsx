@@ -27,14 +27,17 @@ export default function DateFilter({
   }
 
   return (
-    <div className="glass-card px-4 py-2 flex flex-col sm:flex-row sm:items-center gap-2 shrink-0 rounded-xl">
-      <label className="form-label-caps mb-0">Select date</label>
+    <div className="portal-list-date-filter">
+      <label className="portal-list-date-filter__label" htmlFor="portal-date-filter">
+        Attendance date
+      </label>
       <input
+        id="portal-date-filter"
         type="date"
         value={value}
         onChange={(e) => handleChange(e.target.value)}
-        className="form-input py-2 text-sm min-h-[44px] max-w-[200px]"
-        aria-label="Filter by date"
+        className="form-input portal-list-date-filter__input"
+        aria-label="Select attendance date"
       />
     </div>
   );

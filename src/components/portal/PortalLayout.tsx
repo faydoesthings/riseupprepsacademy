@@ -1,19 +1,29 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { signOut, useSession } from "next-auth/react";
-import toast from "react-hot-toast";
+import { usePathname, useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import BrandLogo from "@/components/brand/BrandLogo";
+import NotificationsBell from "@/components/portal/NotificationsBell";
+import PortalUserMenu from "@/components/portal/PortalUserMenu";
+import type { LucideIcon } from "lucide-react";
 import {
   LayoutDashboard, Users, BookOpen, Calendar,
-  FileText, DollarSign, ClipboardCheck, Bell, Settings, LogOut,
+  FileText, DollarSign, ClipboardCheck, Bell,
   Menu, X, Heart, BarChart3, Receipt, Wallet,
   UserCheck, Building2, Clock, Shield,
 } from "lucide-react";
 
-const roleMenus: Record<string, Array<{ icon: any; label: string; href: string }>> = {
+const settingsHrefByRole: Record<string, string> = {
+  SUPER_ADMIN: "/portal/admin/settings",
+  TEACHER: "/portal/teacher/settings",
+  STUDENT: "/portal/student/settings",
+  DONOR: "/portal/donor/settings",
+  ACCOUNTANT: "/portal/accountant/settings",
+};
+
+const roleMenus: Record<string, Array<{ icon: LucideIcon; label: string; href: string }>> = {
   SUPER_ADMIN: [
     { icon: LayoutDashboard, label: "Dashboard", href: "/portal/admin" },
     { icon: Users, label: "Students", href: "/portal/admin/students" },
@@ -29,24 +39,23 @@ const roleMenus: Record<string, Array<{ icon: any; label: string; href: string }
     { icon: Receipt, label: "Admissions", href: "/portal/admin/admissions" },
     { icon: Bell, label: "Notifications", href: "/portal/admin/notifications" },
     { icon: Shield, label: "Audit Log", href: "/portal/admin/audit" },
-    { icon: Settings, label: "Settings", href: "/portal/admin/settings" },
   ],
   TEACHER: [
     { icon: LayoutDashboard, label: "Dashboard", href: "/portal/teacher" },
     { icon: ClipboardCheck, label: "Attendance", href: "/portal/teacher/attendance" },
     { icon: BookOpen, label: "Materials", href: "/portal/teacher/materials" },
     { icon: FileText, label: "Assignments", href: "/portal/teacher/assignments" },
-    { icon: BarChart3, label: "Exam Results", href: "/portal/teacher/results" },
+    { icon: BarChart3, label: "Exam Results", href: "/portal/teacher/exams" },
     { icon: Calendar, label: "Timetable", href: "/portal/teacher/timetable" },
     { icon: Wallet, label: "Payslips", href: "/portal/teacher/payslips" },
-    { icon: Bell, label: "Announcements", href: "/portal/teacher/announcements" },
+    { icon: Bell, label: "Announcements", href: "/portal/teacher/notifications" },
   ],
   STUDENT: [
     { icon: LayoutDashboard, label: "Dashboard", href: "/portal/student" },
     { icon: BookOpen, label: "Study Material", href: "/portal/student/materials" },
     { icon: FileText, label: "Assignments", href: "/portal/student/assignments" },
     { icon: ClipboardCheck, label: "Attendance", href: "/portal/student/attendance" },
-    { icon: BarChart3, label: "Exam Results", href: "/portal/student/results" },
+    { icon: BarChart3, label: "Exam Results", href: "/portal/student/exams" },
     { icon: DollarSign, label: "Fee Status", href: "/portal/student/fees" },
     { icon: Calendar, label: "Timetable", href: "/portal/student/timetable" },
     { icon: Bell, label: "Notifications", href: "/portal/student/notifications" },
@@ -79,9 +88,37 @@ const roleBadgeColors: Record<string, string> = {
 export default function PortalLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const pathname = usePathname();
-  const { data: session } = useSession();
-  const role = (session?.user as any)?.role || "STUDENT";
-  const menuItems = roleMenus[role] || roleMenus.STUDENT;
+  const router = useRouter();
+  const { data: session, status } = useSession();
+
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.replace("/login");
+    }
+  }, [status, router]);
+
+  if (status === "loading") {
+    return (
+      <div className="min-h-screen bg-[#0D1B2A] flex items-center justify-center">
+        <div className="text-white/50 text-sm">Loading portal…</div>
+      </div>
+    );
+  }
+
+  if (status === "unauthenticated" || !session?.user) {
+    return (
+      <div className="min-h-screen bg-[#0D1B2A] flex items-center justify-center">
+        <div className="text-white/50 text-sm">Redirecting to sign in…</div>
+      </div>
+    );
+  }
+
+  const role = (session.user as { role?: string }).role;
+  const resolvedRole = role ?? "UNKNOWN";
+  const menuItems = roleMenus[resolvedRole] ?? [];
+  const roleLabel = resolvedRole.replace(/_/g, " ");
+  const roleBadgeClass = roleBadgeColors[resolvedRole] ?? "bg-white/10 text-white/60";
+  const settingsHref = settingsHrefByRole[resolvedRole] ?? null;
 
   // Get page title from current path
   const currentItem = menuItems.find(
@@ -93,13 +130,12 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
     <div className="min-h-screen bg-[#0D1B2A]">
       {/* Sidebar */}
       <aside className={`sidebar z-50 ${sidebarOpen ? "open" : ""}`}>
-        <div className="px-4 pb-4 mb-2 border-b border-white/[0.06]">
+        <div className="sidebar__brand">
           <BrandLogo variant="full" href="/" className="!h-9" />
         </div>
 
-        {/* Nav Links */}
-        <nav className="px-3 flex-1 overflow-y-auto">
-          <p className="px-3 mb-2 text-[10px] font-semibold uppercase tracking-[0.15em] text-white/20">Main Menu</p>
+        <nav className="sidebar__nav flex-1 overflow-y-auto" aria-label="Portal navigation">
+          <p className="sidebar__label">Main Menu</p>
           {menuItems.map((item) => {
             const isActive =
               pathname === item.href ||
@@ -118,66 +154,57 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
           })}
         </nav>
 
-        {/* User Info + Logout */}
-        <div className="px-3 pb-4 mt-auto">
-          <div className="glass-card px-3 py-3 mb-2 rounded-2xl">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#F78C1F] to-[#C0392B] flex items-center justify-center text-white text-xs font-bold">
-                {session?.user?.name?.split(" ").map((n: string) => n[0]).join("").slice(0, 2) || "U"}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-white truncate">{session?.user?.name || "User"}</p>
-                <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-full mt-0.5 ${roleBadgeColors[role] || ""}`}>
-                  {role.replace("_", " ")}
-                </span>
-              </div>
-            </div>
-          </div>
-          <button
-            onClick={() => signOut({ callbackUrl: "/" })}
-            className="sidebar-link w-full text-[#C0392B] hover:text-[#e74c3c] hover:bg-[#C0392B]/5"
-          >
-            <LogOut className="w-[18px] h-[18px]" />
-            Sign Out
-          </button>
+        <div className="sidebar__footer mt-auto">
+          <PortalUserMenu
+            variant="sidebar"
+            name={session.user.name || "User"}
+            image={session.user.image}
+            roleLabel={roleLabel}
+            roleBadgeClass={roleBadgeClass}
+            settingsHref={settingsHref}
+            onNavigate={() => setSidebarOpen(false)}
+          />
         </div>
       </aside>
 
       {/* Main Content */}
       <div className="portal-main">
         {/* Top Bar */}
-        <header className="sticky top-0 z-20 bg-[#070B14]/80 backdrop-blur-[20px] border-b border-white/[0.06] px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <header className="portal-topbar">
+          <div className="portal-topbar__start">
             <button
+              type="button"
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="md:hidden bg-transparent hover:bg-white/[0.06] text-white/40 hover:text-white rounded-xl p-2 transition-all min-h-[44px] min-w-[44px] flex items-center justify-center"
+              className="portal-topbar__menu-btn md:hidden"
+              aria-label={sidebarOpen ? "Close menu" : "Open menu"}
             >
               {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
-            <h1 className="text-base font-semibold text-white">{pageTitle}</h1>
+            <nav className="portal-topbar__breadcrumb hidden md:flex" aria-label="Breadcrumb">
+              <span className="portal-topbar__crumb portal-topbar__crumb--muted">Portal</span>
+              <span className="portal-topbar__sep" aria-hidden>/</span>
+              <span className="portal-topbar__crumb portal-topbar__crumb--current">{pageTitle}</span>
+            </nav>
+            <h1 className="portal-topbar__title md:hidden">{pageTitle}</h1>
           </div>
 
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => toast("Notifications coming soon", { icon: "🔔" })}
-              aria-label="Notifications (coming soon)"
-              className="bg-transparent hover:bg-white/[0.06] text-white/40 hover:text-white rounded-xl p-2 transition-all min-h-[44px] min-w-[44px] flex items-center justify-center"
-            >
-              <Bell className="w-5 h-5" />
-            </button>
-            <span className="hidden sm:block text-white/70 text-sm font-medium truncate max-w-[140px]">
-              {session?.user?.name || "User"}
-            </span>
-            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#05335C] to-[#0D1B2A] flex items-center justify-center text-white text-xs font-bold border border-white/10">
-              {session?.user?.name?.[0] || "U"}
-            </div>
+          <div className="portal-topbar__end">
+            <NotificationsBell />
+            <PortalUserMenu
+              variant="topbar"
+              name={session.user.name || "User"}
+              image={session.user.image}
+              roleLabel={roleLabel}
+              roleBadgeClass={roleBadgeClass}
+              settingsHref={settingsHref}
+            />
           </div>
         </header>
 
         {/* Ajrak texture behind content */}
         <div className="relative">
           <div className="absolute inset-0 opacity-[0.04] pointer-events-none" style={{ backgroundImage: "url('/patterns/ajrak-tile.svg')", backgroundSize: "40px 40px" }} />
-          <main className="relative z-10 p-6">{children}</main>
+          <main className="portal-content relative z-10">{children}</main>
         </div>
       </div>
 

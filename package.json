@@ -2,9 +2,15 @@
   "name": "riseup-academy",
   "version": "0.1.0",
   "private": true,
+  "description": "Website and operations portal for RiseUp Preps Academy, Sukkur, Pakistan",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/faydoesthings/riseupprepsacademy.git"
+  },
   "scripts": {
     "dev": "next dev",
-    "setup": "prisma generate && prisma db push && tsx prisma/seed.ts",
+    "setup": "node scripts/postgres-dev.mjs setup",
+    "db:postgres:start": "node scripts/postgres-dev.mjs start",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -17,6 +23,8 @@
     "@auth/prisma-adapter": "^1.0.0",
     "@prisma/client": "5.22.0",
     "@react-spring/web": "^10.0.3",
+    "@react-three/drei": "^9.117.3",
+    "@react-three/fiber": "^8.17.10",
     "bcryptjs": "^2.4.3",
     "clsx": "^2.1.1",
     "dotenv": "^16.4.5",
@@ -33,6 +41,7 @@
     "recharts": "^2.15.4",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.6.0",
+    "three": "^0.170.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
@@ -41,8 +50,11 @@
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
+    "@types/three": "^0.170.0",
+    "embedded-postgres": "^18.3.0-beta.17",
     "eslint": "^8",
     "eslint-config-next": "14.2.5",
+    "playwright": "^1.60.0",
     "tailwindcss": "^4",
     "tsx": "^4.19.2",
     "typescript": "^5"
