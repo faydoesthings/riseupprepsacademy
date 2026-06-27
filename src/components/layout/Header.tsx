@@ -24,9 +24,9 @@ export default function Header() {
   return (
     <header className="site-header sticky top-0 z-50 border-b border-white/[0.06] bg-[#0F172A]/90 backdrop-blur-xl backdrop-saturate-150">
       <div className="container-main">
-        <div className="grid h-[4.5rem] grid-cols-[auto_1fr_auto] items-center gap-4 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
+        <div className="grid min-h-[4.75rem] grid-cols-[auto_1fr_auto] items-center gap-4 py-2 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
           <div className="flex items-center justify-start min-w-0">
-            <BrandLogo variant="full" priority className="h-10 w-auto sm:h-11" />
+            <BrandLogo variant="full" size="md" priority />
           </div>
 
           <nav

@@ -16,6 +16,8 @@ import { submitContactMessage } from "@/app/actions/contact-actions";
 import PageHero from "@/components/layout/PageHero";
 import {
   ACADEMY_MAP_EMBED,
+  ACADEMY_PHONE_DISPLAY,
+  ACADEMY_WHATSAPP_URL,
   contactChannels,
   contactSubjects,
 } from "@/data/contact";
@@ -75,7 +77,7 @@ export default function ContactPage() {
         <section className="section-padding pb-20 md:pb-28">
           <div className="container-main flex justify-center">
             <motion.div
-              initial={reduceMotion ? false : { opacity: 0, y: 16 }}
+              initial={false}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, ease: MOTION_EASE }}
               className="contact-success landing-card landing-card--center w-full max-w-lg"
@@ -92,7 +94,7 @@ export default function ContactPage() {
               </p>
               <div className="contact-success__actions landing-cta-actions">
                 <a
-                  href="https://wa.me/923001234567"
+                  href={ACADEMY_WHATSAPP_URL}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="btn btn-secondary min-h-[48px] px-6"
@@ -123,7 +125,7 @@ export default function ContactPage() {
         <div className="container-main">
           <div className="contact-layout">
             <motion.div
-              initial="hidden"
+              initial={false}
               whileInView="show"
               viewport={viewport}
               variants={fadeUp}
@@ -192,7 +194,7 @@ export default function ContactPage() {
                       name="phone"
                       autoComplete="tel"
                       className="form-input"
-                      placeholder="+92 300 1234567"
+                      placeholder={ACADEMY_PHONE_DISPLAY}
                       value={formData.phone}
                       onChange={handleChange}
                     />
@@ -258,7 +260,7 @@ export default function ContactPage() {
             </motion.div>
 
             <motion.aside
-              initial="hidden"
+              initial={false}
               whileInView="show"
               viewport={viewport}
               variants={fadeUp}
@@ -337,7 +339,7 @@ export default function ContactPage() {
       <section className="section-padding pb-20 md:pb-28" aria-labelledby="contact-map-title">
         <div className="container-main max-w-5xl mx-auto">
           <motion.div
-            initial="hidden"
+            initial={false}
             whileInView="show"
             viewport={viewport}
             variants={fadeUp}

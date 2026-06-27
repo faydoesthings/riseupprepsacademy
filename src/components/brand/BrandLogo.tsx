@@ -3,54 +3,73 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 
 type BrandLogoProps = {
-  /** Full logo includes wordmark; icon crops to the mark for compact UI */
+  /** Full = emblem + wordmark; icon = emblem only */
   variant?: "full" | "icon";
+  /** sm = portal, md = header, lg = footer & auth */
+  size?: "sm" | "md" | "lg";
   href?: string;
   className?: string;
   priority?: boolean;
 };
 
+const sizeClass = {
+  sm: "brand-logo--sm",
+  md: "brand-logo--md",
+  lg: "brand-logo--lg",
+} as const;
+
+function LogoEmblem({ priority }: { priority?: boolean }) {
+  return (
+    <span className="brand-logo__emblem" aria-hidden>
+      <Image
+        src="/images/logo.png"
+        alt=""
+        width={160}
+        height={160}
+        priority={priority}
+        className="brand-logo__emblem-img"
+      />
+    </span>
+  );
+}
+
+function LogoWordmark() {
+  return (
+    <span className="brand-logo__wordmark">
+      <span className="brand-logo__title">Rise Up</span>
+      <span className="brand-logo__subtitle">Preps Academy</span>
+    </span>
+  );
+}
+
 export default function BrandLogo({
   variant = "full",
+  size = "md",
   href = "/",
   className,
   priority = false,
 }: BrandLogoProps) {
-  const image =
-    variant === "icon" ? (
-      <span
-        className={cn(
-          "relative block h-10 w-10 shrink-0 overflow-hidden rounded-lg",
-          className
-        )}
-      >
-        <Image
-          src="/images/logo.png"
-          alt="RiseUp Preps Academy"
-          width={120}
-          height={120}
-          priority={priority}
-          className="absolute left-1/2 top-0 h-[180%] w-[180%] max-w-none -translate-x-1/2 object-contain object-top"
-        />
-      </span>
-    ) : (
-      <Image
-        src="/images/logo.png"
-        alt="RiseUp Preps Academy"
-        width={200}
-        height={64}
-        priority={priority}
-        className={cn("h-11 w-auto sm:h-12", className)}
-      />
-    );
+  const content = (
+    <>
+      <LogoEmblem priority={priority} />
+      {variant === "full" && <LogoWordmark />}
+    </>
+  );
+
+  const rootClass = cn(
+    "brand-logo",
+    sizeClass[size],
+    variant === "icon" && "brand-logo--icon-only",
+    className
+  );
 
   if (!href) {
-    return image;
+    return <span className={rootClass}>{content}</span>;
   }
 
   return (
-    <Link href={href} className="inline-flex shrink-0 items-center focus:outline-none focus-visible:ring-2 focus-visible:ring-[#F78C1F]/50 rounded-lg">
-      {image}
+    <Link href={href} className={rootClass} aria-label="RiseUp Preps Academy home">
+      {content}
     </Link>
   );
 }

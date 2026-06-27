@@ -15,6 +15,7 @@ import {
 import { submitDonationPledge } from "@/app/actions/donor-actions";
 import PageHero from "@/components/layout/PageHero";
 import DonorImpactShowcase from "@/components/media/DonorImpactShowcase";
+import { ACADEMY_PHONE_DISPLAY } from "@/data/contact";
 
 const amountPresets = [1000, 2500, 5000, 10000];
 
@@ -326,7 +327,7 @@ export default function DonatePage() {
                         type="tel"
                         autoComplete="tel"
                         className="form-input"
-                        placeholder="+92 300 1234567"
+                        placeholder={ACADEMY_PHONE_DISPLAY}
                         value={donorPhone}
                         onChange={(e) => setDonorPhone(e.target.value)}
                       />

@@ -15,7 +15,7 @@ export async function submitAdmissionApplication(formData: FormData) {
     const parentPhone = (formData.get("parentPhone") as string)?.trim();
     const parentEmail = (formData.get("parentEmail") as string)?.trim();
     const address = (formData.get("address") as string)?.trim();
-    const previousSchool = (formData.get("previousSchool") as string)?.trim();
+    const currentSchool = (formData.get("currentSchool") as string)?.trim();
 
     if (!studentName || !dateOfBirth || !gradeApplying || !parentName || !parentPhone) {
       return { success: false, error: "Please fill in all required fields" };
@@ -39,7 +39,7 @@ export async function submitAdmissionApplication(formData: FormData) {
         parentPhone,
         parentEmail: parentEmail || null,
         address: address || null,
-        previousSchool: previousSchool || null,
+        previousSchool: currentSchool || null,
       },
     });
 

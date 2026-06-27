@@ -75,7 +75,7 @@ function CascadeSlot({
 
   return (
     <motion.div
-      initial="hidden"
+      initial={false}
       whileInView="show"
       viewport={{ once: true, margin: "-40px" }}
       variants={fade}
@@ -109,7 +109,7 @@ export default function TeamShowcase({ members }: { members: TeamMember[] }) {
         ))}
 
         <motion.div
-          initial="hidden"
+          initial={false}
           whileInView="show"
           viewport={{ once: true, margin: "-40px" }}
           variants={fade}
@@ -121,7 +121,7 @@ export default function TeamShowcase({ members }: { members: TeamMember[] }) {
 
       <div className="team-showcase__mobile" aria-label="Leadership team">
         <motion.div
-          initial="hidden"
+          initial={false}
           whileInView="show"
           viewport={{ once: true, margin: "-40px" }}
           variants={fade}
@@ -134,7 +134,7 @@ export default function TeamShowcase({ members }: { members: TeamMember[] }) {
             (member, index) => (
               <motion.div
                 key={member.slug}
-                initial="hidden"
+                initial={false}
                 whileInView="show"
                 viewport={{ once: true, margin: "-40px" }}
                 variants={fade}

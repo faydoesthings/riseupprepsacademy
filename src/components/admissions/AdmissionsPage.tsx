@@ -16,6 +16,7 @@ import {
 import { submitAdmissionApplication } from "@/app/actions/admission-actions";
 import PageHero from "@/components/layout/PageHero";
 import { admissionSteps, admissionsHighlights, gradeOptionGroups } from "@/data/admissions";
+import { ACADEMY_PHONE_DISPLAY } from "@/data/contact";
 import { getFadeUp, MOTION_EASE } from "@/lib/motion";
 
 const initialForm = {
@@ -26,7 +27,7 @@ const initialForm = {
   parentPhone: "",
   parentEmail: "",
   address: "",
-  previousSchool: "",
+  currentSchool: "",
 };
 
 export default function AdmissionsPage() {
@@ -75,7 +76,7 @@ export default function AdmissionsPage() {
         <section className="section-padding pb-20 md:pb-28">
           <div className="container-main flex justify-center">
             <motion.div
-              initial={reduceMotion ? false : { opacity: 0, y: 16 }}
+              initial={false}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, ease: MOTION_EASE }}
               className="admissions-success landing-card landing-card--center w-full max-w-lg"
@@ -118,7 +119,7 @@ export default function AdmissionsPage() {
       <section className="section-padding border-b border-white/[0.06] bg-[#070B14]/50">
         <div className="container-main section-centered">
           <motion.ol
-            initial="hidden"
+            initial={false}
             whileInView="show"
             viewport={viewport}
             variants={fadeUp}
@@ -144,7 +145,7 @@ export default function AdmissionsPage() {
         <div className="container-main">
           <div className="admissions-layout">
             <motion.div
-              initial="hidden"
+              initial={false}
               whileInView="show"
               viewport={viewport}
               variants={fadeUp}
@@ -234,18 +235,21 @@ export default function AdmissionsPage() {
                       </p>
                     </div>
                     <div className="admissions-field">
-                      <label className="form-label" htmlFor="previousSchool">
-                        Previous school
+                      <label className="form-label" htmlFor="currentSchool">
+                        Current school
                       </label>
                       <input
-                        id="previousSchool"
+                        id="currentSchool"
                         type="text"
-                        name="previousSchool"
+                        name="currentSchool"
                         className="form-input"
-                        placeholder="Optional"
-                        value={formData.previousSchool}
+                        placeholder="School your child attends now"
+                        value={formData.currentSchool}
                         onChange={handleChange}
                       />
+                      <p className="admissions-field-hint">
+                        Optional — leave blank if not enrolled elsewhere.
+                      </p>
                     </div>
                   </div>
                 </fieldset>
@@ -283,7 +287,7 @@ export default function AdmissionsPage() {
                         required
                         autoComplete="tel"
                         className="form-input"
-                        placeholder="+92 300 1234567"
+                        placeholder={ACADEMY_PHONE_DISPLAY}
                         value={formData.parentPhone}
                         onChange={handleChange}
                       />
@@ -354,7 +358,7 @@ export default function AdmissionsPage() {
             </motion.div>
 
             <motion.aside
-              initial="hidden"
+              initial={false}
               whileInView="show"
               viewport={viewport}
               variants={fadeUp}

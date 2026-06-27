@@ -9,6 +9,7 @@
   },
   "scripts": {
     "dev": "next dev",
+    "dev:clean": "node -e \"require('fs').rmSync('.next',{recursive:true,force:true})\" && next dev",
     "setup": "node scripts/postgres-dev.mjs setup",
     "db:postgres:start": "node scripts/postgres-dev.mjs start",
     "postinstall": "prisma generate",

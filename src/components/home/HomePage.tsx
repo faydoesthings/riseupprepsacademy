@@ -20,6 +20,7 @@ import {
 import { focusAreas } from "@/data/programs";
 import { getFadeUp, getStagger } from "@/lib/motion";
 import StorytellingGallery from "@/components/media/StorytellingGallery";
+import HomeImpactGlance from "@/components/home/HomeImpactGlance";
 import { getAcademyPhoto } from "@/data/academy-photos";
 
 type HomeStats = {
@@ -60,26 +61,28 @@ const testimonials = [
       "Seeing the direct impact of my donation on students' education has been the most rewarding experience.",
     name: "Hamza Merchant",
     role: "Donor",
+    initials: "HM",
+    accent: "#F78C1F",
   },
   {
     quote:
       "Teaching here is a mission. The students' hunger for knowledge inspires me every single day.",
     name: "Fatima Shaikh",
     role: "Teacher",
+    initials: "FS",
+    accent: "#0ABFBC",
   },
   {
     quote:
       "My son's confidence and grades have improved dramatically. The teachers truly care.",
     name: "Parent of Hassan",
     role: "Parent",
+    initials: "PH",
+    accent: "#4A9EE8",
   },
 ];
 
-function formatPKR(amount: number) {
-  if (amount >= 1_000_000) return `${(amount / 1_000_000).toFixed(1)}M`;
-  if (amount >= 1_000) return `${Math.round(amount / 1_000)}K`;
-  return String(amount);
-}
+const featureAccents = ["#F78C1F", "#0ABFBC", "#4A9EE8", "#F78C1F"];
 
 function SectionHeader({
   eyebrow,
@@ -120,14 +123,6 @@ function SectionHeader({
 export default function HomePage({ stats }: { stats?: HomeStats }) {
   const reduceMotion = useReducedMotion();
   const data = stats ?? { students: 30, teachers: 3, subjects: 18, totalDonated: 900000 };
-
-  const impactStats = [
-    { value: `${data.students}+`, label: "Students enrolled", accent: "#F78C1F" },
-    { value: "94%", label: "Monthly attendance", accent: "#0ABFBC" },
-    { value: "92%", label: "Exam pass rate", accent: "#0ABFBC" },
-    { value: "12", label: "Active donors", accent: "#F78C1F" },
-    { value: `PKR ${formatPKR(data.totalDonated)}`, label: "Total raised", accent: "#F78C1F" },
-  ];
 
   const fadeUp = getFadeUp(reduceMotion, 24);
   const stagger = getStagger(reduceMotion, 0.08, 0.05);
@@ -212,54 +207,15 @@ export default function HomePage({ stats }: { stats?: HomeStats }) {
               </ul>
           </div>
         </div>
+
+        <a href="#impact-heading" className="home-hero__scroll-hint" aria-label="Scroll to impact section">
+          <span className="home-hero__scroll-hint-label">Our impact</span>
+          <ChevronRight className="home-hero__scroll-hint-icon" aria-hidden />
+        </a>
       </section>
 
       {/* Impact */}
-      <section className="border-y border-white/[0.06] bg-[#0B1220]" aria-labelledby="impact-heading">
-        <div className="container-main section-padding">
-          <motion.div
-            initial="hidden"
-            whileInView="show"
-            viewport={viewport}
-            variants={fadeUp}
-            className="flex justify-center section-header-block w-full"
-          >
-            <SectionHeader
-              id="impact-heading"
-              eyebrow="Our impact"
-              title="Impact at a glance"
-              description="Real numbers from our academy — updated as students grow and community support continues."
-              align="center"
-            />
-          </motion.div>
-
-          <motion.ul
-            initial="hidden"
-            whileInView="show"
-            viewport={viewport}
-            variants={stagger}
-            className="grid grid-cols-1 min-[420px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-5 md:gap-6"
-          >
-            {impactStats.map((stat) => (
-              <motion.li
-                key={stat.label}
-                variants={fadeUp}
-                className="landing-card landing-card--stat h-full w-full"
-              >
-                <p
-                  className="text-2xl sm:text-3xl lg:text-4xl font-bold font-mono tracking-tight tabular-nums text-center w-full px-1"
-                  style={{ color: stat.accent }}
-                >
-                  {stat.value}
-                </p>
-                <p className="text-[0.6875rem] sm:text-xs font-medium uppercase tracking-wider text-white/50 leading-relaxed text-center w-full px-2 sm:px-3">
-                  {stat.label}
-                </p>
-              </motion.li>
-            ))}
-          </motion.ul>
-        </div>
-      </section>
+      <HomeImpactGlance stats={{ students: data.students, totalDonated: data.totalDonated }} />
 
       {/* Campus life */}
       <section
@@ -268,7 +224,7 @@ export default function HomePage({ stats }: { stats?: HomeStats }) {
       >
         <div className="container-main section-centered">
           <motion.div
-            initial="hidden"
+            initial={false}
             whileInView="show"
             viewport={viewport}
             variants={fadeUp}
@@ -282,7 +238,7 @@ export default function HomePage({ stats }: { stats?: HomeStats }) {
               align="center"
             />
           </motion.div>
-          <motion.div initial="hidden" whileInView="show" viewport={viewport} variants={fadeUp}>
+          <motion.div initial={false} whileInView="show" viewport={viewport} variants={fadeUp}>
             <StorytellingGallery
               photoIds={["teacher-instruction", "students-writing", "outdoor-study"]}
             />
@@ -294,7 +250,7 @@ export default function HomePage({ stats }: { stats?: HomeStats }) {
       <section className="section-padding" aria-labelledby="why-heading">
         <div className="container-main">
           <motion.div
-            initial="hidden"
+            initial={false}
             whileInView="show"
             viewport={viewport}
             variants={fadeUp}
@@ -310,22 +266,24 @@ export default function HomePage({ stats }: { stats?: HomeStats }) {
           </motion.div>
 
           <motion.div
-            initial="hidden"
+            initial={false}
             whileInView="show"
             viewport={viewport}
             variants={stagger}
             className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 md:gap-6"
           >
-            {features.map((f) => {
+            {features.map((f, i) => {
               const Icon = f.icon;
+              const accent = featureAccents[i] ?? "#F78C1F";
               return (
               <motion.article
                 key={f.title}
                 variants={fadeUp}
-                className="landing-card landing-card--center flex flex-col items-center h-full text-center"
+                className="landing-card landing-card--center home-feature-card flex flex-col items-center h-full text-center"
+                style={{ "--feature-accent": accent } as CSSProperties}
               >
-                <div className="landing-card__icon" aria-hidden>
-                  <Icon className="w-[1.375rem] h-[1.375rem] text-[#F78C1F]" strokeWidth={2} />
+                <div className="landing-card__icon home-feature-card__icon" aria-hidden>
+                  <Icon className="w-[1.375rem] h-[1.375rem]" strokeWidth={2} />
                 </div>
                 <h3 className="mt-6 text-base font-semibold text-white mb-3 tracking-tight">
                   {f.title}
@@ -345,7 +303,7 @@ export default function HomePage({ stats }: { stats?: HomeStats }) {
       >
         <div className="container-main section-centered">
           <motion.div
-            initial="hidden"
+            initial={false}
             whileInView="show"
             viewport={viewport}
             variants={fadeUp}
@@ -365,7 +323,7 @@ export default function HomePage({ stats }: { stats?: HomeStats }) {
           </motion.div>
 
           <motion.div
-            initial="hidden"
+            initial={false}
             whileInView="show"
             viewport={viewport}
             variants={stagger}
@@ -411,7 +369,7 @@ export default function HomePage({ stats }: { stats?: HomeStats }) {
       <section className="section-padding" aria-labelledby="testimonials-heading">
         <div className="container-main">
           <motion.div
-            initial="hidden"
+            initial={false}
             whileInView="show"
             viewport={viewport}
             variants={fadeUp}
@@ -427,7 +385,7 @@ export default function HomePage({ stats }: { stats?: HomeStats }) {
           </motion.div>
 
           <motion.div
-            initial="hidden"
+            initial={false}
             whileInView="show"
             viewport={viewport}
             variants={stagger}
@@ -437,15 +395,22 @@ export default function HomePage({ stats }: { stats?: HomeStats }) {
               <motion.blockquote
                 key={t.name}
                 variants={fadeUp}
-                className="landing-card landing-card--center flex flex-col items-center h-full"
+                className="landing-card landing-card--center home-testimonial flex flex-col items-center h-full"
               >
-                <Quote className="w-8 h-8 text-[#F78C1F]/30 mb-6 shrink-0" aria-hidden />
+                <div
+                  className="home-testimonial__avatar"
+                  style={{ "--avatar-accent": t.accent } as CSSProperties}
+                  aria-hidden
+                >
+                  {t.initials}
+                </div>
+                <Quote className="w-7 h-7 text-[#F78C1F]/25 mb-5 shrink-0" aria-hidden />
                 <p className="text-sm text-white/65 leading-relaxed flex-1">
                   &ldquo;{t.quote}&rdquo;
                 </p>
-                <footer className="mt-10 pt-7 border-t border-white/[0.08] w-full text-center">
+                <footer className="mt-8 pt-6 border-t border-white/[0.08] w-full text-center">
                   <p className="text-sm font-semibold text-white">{t.name}</p>
-                  <p className="text-xs text-white/45 mt-2">{t.role}</p>
+                  <span className="home-testimonial__role">{t.role}</span>
                 </footer>
               </motion.blockquote>
             ))}
@@ -457,7 +422,7 @@ export default function HomePage({ stats }: { stats?: HomeStats }) {
       <section className="section-padding border-t border-white/[0.06] pb-20 md:pb-28">
         <div className="container-main section-centered">
           <motion.div
-            initial="hidden"
+            initial={false}
             whileInView="show"
             viewport={viewport}
             variants={fadeUp}
@@ -473,6 +438,7 @@ export default function HomePage({ stats }: { stats?: HomeStats }) {
             />
             <div className="relative flex flex-col items-center w-full mx-auto">
               <div className="flex flex-col items-center w-full gap-5 md:gap-6">
+                <span className="home-cta-badge">Monthly sponsorship</span>
                 <div className="landing-card__icon landing-card__icon--lg border-white/15 bg-white/[0.06]" aria-hidden>
                   <BookOpen className="text-white/80" strokeWidth={2} />
                 </div>

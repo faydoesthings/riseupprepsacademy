@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
 import {
@@ -12,6 +12,7 @@ import {
   GraduationCap,
   ArrowRight,
   ChevronRight,
+  ChevronDown,
 } from "lucide-react";
 import ArtDirectedImage from "@/components/media/ArtDirectedImage";
 import { focusAreas, learningApproach } from "@/data/programs";
@@ -68,6 +69,8 @@ function ProgMethodOrbit({ reduceMotion }: { reduceMotion: boolean | null }) {
 export default function ProgramsPage() {
   const reduceMotion = useReducedMotion();
   const [activeSubject, setActiveSubject] = useState<string | null>(null);
+  const [expandedSubject, setExpandedSubject] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
 
   const fadeUp = getFadeUp(reduceMotion);
   const stagger = getStagger(reduceMotion);
@@ -75,6 +78,36 @@ export default function ProgramsPage() {
 
   const teacherPhoto = getAcademyPhoto("teacher-instruction");
   const mathPhoto = getAcademyPhoto("whiteboard-math");
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    const updateMobile = () => setIsMobile(mq.matches);
+    updateMobile();
+    mq.addEventListener("change", updateMobile);
+    return () => mq.removeEventListener("change", updateMobile);
+  }, []);
+
+  useEffect(() => {
+    const syncFromHash = () => {
+      const id = window.location.hash.replace(/^#prog-/, "");
+      if (!focusAreas.some((area) => area.id === id)) return;
+
+      setActiveSubject(id);
+      if (window.matchMedia("(max-width: 767px)").matches) {
+        setExpandedSubject(id);
+      }
+    };
+
+    syncFromHash();
+    window.addEventListener("hashchange", syncFromHash);
+    return () => window.removeEventListener("hashchange", syncFromHash);
+  }, []);
+
+  const toggleSubject = (id: string) => {
+    if (window.matchMedia("(min-width: 768px)").matches) return;
+    setExpandedSubject((current) => (current === id ? null : id));
+    setActiveSubject(id);
+  };
 
   return (
     <main className="prog-page">
@@ -187,6 +220,7 @@ export default function ProgramsPage() {
               const Icon = focusIcons[i];
               const isDigital = area.id === "digital";
               const isMath = area.id === "mathematics";
+              const isOpen = expandedSubject === area.id;
               return (
                 <motion.article
                   key={area.id}
@@ -194,7 +228,7 @@ export default function ProgramsPage() {
                   variants={fadeUp}
                   className={`prog-bento__cell prog-bento__cell--${area.id}${
                     activeSubject === area.id ? " prog-bento__cell--highlight" : ""
-                  }`}
+                  }${isOpen ? " prog-bento__cell--open" : ""}`}
                   style={{ "--cell-accent": area.accent } as CSSProperties}
                   onMouseEnter={() => setActiveSubject(area.id)}
                   onMouseLeave={() => setActiveSubject(null)}
@@ -203,43 +237,59 @@ export default function ProgramsPage() {
                     {String(i + 1).padStart(2, "0")}
                   </span>
 
-                  {isMath && mathPhoto && (
-                    <div className="prog-bento__photo" aria-hidden>
-                      <ArtDirectedImage
-                        src={mathPhoto.src}
-                        alt=""
-                        treatment={mathPhoto.treatment}
-                        objectPosition={mathPhoto.objectPosition}
-                        focalZoom={mathPhoto.focalZoom}
-                        sizes="280px"
-                        className="prog-bento__photo-img"
-                      />
+                  <button
+                    type="button"
+                    className="prog-bento__header"
+                    aria-expanded={isMobile ? isOpen : true}
+                    aria-controls={`prog-body-${area.id}`}
+                    onClick={() => toggleSubject(area.id)}
+                  >
+                    <div className="prog-bento__head">
+                      <div className="prog-bento__icon">
+                        <Icon className="w-5 h-5" strokeWidth={2} aria-hidden />
+                      </div>
+                      <p className="prog-bento__tagline">{area.tagline}</p>
                     </div>
-                  )}
 
-                  <div className="prog-bento__head">
-                    <div className="prog-bento__icon">
-                      <Icon className="w-5 h-5" strokeWidth={2} aria-hidden />
+                    <div className="prog-bento__header-row">
+                      <h3 className="prog-bento__title">{area.title}</h3>
+                      <ChevronDown className="prog-bento__chevron" aria-hidden />
                     </div>
-                    <p className="prog-bento__tagline">{area.tagline}</p>
+                  </button>
+
+                  <div id={`prog-body-${area.id}`} className="prog-bento__body">
+                    <div className="prog-bento__body-inner">
+                      {isMath && mathPhoto && (
+                        <div className="prog-bento__photo" aria-hidden>
+                          <ArtDirectedImage
+                            src={mathPhoto.src}
+                            alt=""
+                            treatment={mathPhoto.treatment}
+                            objectPosition={mathPhoto.objectPosition}
+                            focalZoom={mathPhoto.focalZoom}
+                            sizes="280px"
+                            className="prog-bento__photo-img"
+                          />
+                        </div>
+                      )}
+
+                      <p className="prog-bento__text">{area.description}</p>
+
+                      <ul className="prog-bento__list">
+                        {area.highlights.map((item) => (
+                          <li key={item}>{item}</li>
+                        ))}
+                      </ul>
+
+                      {isDigital && (
+                        <div className="prog-bento__tech" aria-hidden>
+                          <span className="font-mono text-[10px] tracking-wider opacity-40">
+                            learn · research · create · responsibly
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </div>
-
-                  <h3 className="prog-bento__title">{area.title}</h3>
-                  <p className="prog-bento__text">{area.description}</p>
-
-                  <ul className="prog-bento__list">
-                    {area.highlights.map((item) => (
-                      <li key={item}>{item}</li>
-                    ))}
-                  </ul>
-
-                  {isDigital && (
-                    <div className="prog-bento__tech" aria-hidden>
-                      <span className="font-mono text-[10px] tracking-wider opacity-40">
-                        learn · research · create · responsibly
-                      </span>
-                    </div>
-                  )}
                 </motion.article>
               );
             })}

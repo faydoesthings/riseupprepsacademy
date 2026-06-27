@@ -129,10 +129,6 @@ export default function LoginPage() {
             Back to website
           </Link>
 
-          <div className="auth-panel__brand">
-            <BrandLogo variant="full" href="/" className="!h-12" priority />
-          </div>
-
           <h1 className="auth-panel__title font-display">Welcome back</h1>
           <p className="auth-panel__lead">
             Sign in to your RiseUp portal — built for students, staff, donors, and families across
@@ -156,8 +152,8 @@ export default function LoginPage() {
 
         <section className="auth-form-section" aria-labelledby="auth-sign-in-heading">
           <div className="auth-form-section__inner">
-            <div className="auth-form-section__mobile-brand lg:hidden">
-              <BrandLogo variant="full" href="/" priority />
+            <div className="auth-form-section__brand">
+              <BrandLogo variant="full" size="md" href="/" priority />
             </div>
             <div className="auth-form-card landing-card">
               <div className="auth-form-card__header">
@@ -254,27 +250,27 @@ export default function LoginPage() {
                   Request a portal account
                 </Link>
               </p>
-
-              {process.env.NODE_ENV === "development" && (
-                <details className="auth-dev">
-                  <summary className="auth-dev__summary">Development quick sign-in</summary>
-                  <p className="auth-dev__hint">Password for all test accounts: {DEV_PASSWORD}</p>
-                  <div className="auth-dev__chips">
-                    {DEV_ACCOUNTS.map((account) => (
-                      <button
-                        key={account.email}
-                        type="button"
-                        disabled={loading}
-                        onClick={() => handleQuickLogin(account.email)}
-                        className="auth-dev__chip"
-                      >
-                        {account.label}
-                      </button>
-                    ))}
-                  </div>
-                </details>
-              )}
             </div>
+
+            {process.env.NODE_ENV === "development" && (
+              <details className="auth-dev">
+                <summary className="auth-dev__summary">Development quick sign-in</summary>
+                <p className="auth-dev__hint">Password for all test accounts: {DEV_PASSWORD}</p>
+                <div className="auth-dev__chips">
+                  {DEV_ACCOUNTS.map((account) => (
+                    <button
+                      key={account.email}
+                      type="button"
+                      disabled={loading}
+                      onClick={() => handleQuickLogin(account.email)}
+                      className="auth-dev__chip"
+                    >
+                      {account.label}
+                    </button>
+                  ))}
+                </div>
+              </details>
+            )}
           </div>
         </section>
       </div>

@@ -1,6 +1,12 @@
 import Link from "next/link";
 import { Heart, Mail, Phone, MapPin, GraduationCap, LogIn } from "lucide-react";
 import BrandLogo from "@/components/brand/BrandLogo";
+import {
+  ACADEMY_EMAIL,
+  ACADEMY_PHONE,
+  ACADEMY_PHONE_DISPLAY,
+  academySocialLinks,
+} from "@/data/contact";
 
 const exploreLinks = [
   { label: "About", href: "/about" },
@@ -21,7 +27,7 @@ export default function Footer() {
       <div className="container-main">
         <div className="site-footer__grid">
           <div className="site-footer__brand">
-            <BrandLogo variant="full" href="/" />
+            <BrandLogo variant="full" size="lg" href="/" />
             <p>
               A not-for-profit academy in Sukkur building futures through rigorous academics,
               mentorship, and community support.
@@ -32,6 +38,24 @@ export default function Footer() {
                   {stat}
                 </span>
               ))}
+            </div>
+            <div className="site-footer__social" aria-label="Social media">
+              {academySocialLinks.map((link) => {
+                const Icon = link.icon;
+                return (
+                  <a
+                    key={link.id}
+                    href={link.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="site-footer__social-link"
+                    aria-label={`RiseUp Preps Academy on ${link.label}`}
+                  >
+                    <Icon className="w-4 h-4" aria-hidden />
+                    <span>{link.label}</span>
+                  </a>
+                );
+              })}
             </div>
           </div>
 
@@ -59,14 +83,14 @@ export default function Footer() {
               </li>
               <li className="site-footer__contact-item">
                 <Mail aria-hidden />
-                <a href="mailto:info@riseuppreps.com" className="site-footer__link">
-                  info@riseuppreps.com
+                <a href={`mailto:${ACADEMY_EMAIL}`} className="site-footer__link">
+                  {ACADEMY_EMAIL}
                 </a>
               </li>
               <li className="site-footer__contact-item">
                 <Phone aria-hidden />
-                <a href="tel:+923001234567" className="site-footer__link">
-                  +92 300 123 4567
+                <a href={`tel:${ACADEMY_PHONE}`} className="site-footer__link">
+                  {ACADEMY_PHONE_DISPLAY}
                 </a>
               </li>
             </ul>

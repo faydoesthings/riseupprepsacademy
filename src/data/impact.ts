@@ -1,4 +1,12 @@
-import { GraduationCap, LineChart, HeartHandshake } from "lucide-react";
+import {
+  BookOpen,
+  GraduationCap,
+  HeartHandshake,
+  LineChart,
+  School,
+  Sparkles,
+  Users,
+} from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 export type OutcomeStory = {
@@ -40,3 +48,56 @@ export const outcomeStories: OutcomeStory[] = [
     accent: "#4A9EE8",
   },
 ];
+
+export const fundJourneySteps = [
+  {
+    id: "gift",
+    step: "01",
+    title: "Gift confirmed",
+    description: "Every donation is logged and verified before it appears on this page.",
+    icon: HeartHandshake,
+    accent: "#F78C1F",
+  },
+  {
+    id: "teachers",
+    step: "02",
+    title: "Teachers & mentorship",
+    description: "Salaries and daily instruction for the educators who know students by name.",
+    icon: Users,
+    accent: "#0ABFBC",
+  },
+  {
+    id: "supplies",
+    step: "03",
+    title: "Books & supplies",
+    description: "Notebooks, whiteboard materials, and the basics that keep classrooms running.",
+    icon: BookOpen,
+    accent: "#4A9EE8",
+  },
+  {
+    id: "campus",
+    step: "04",
+    title: "Safe campus",
+    description: "Rent, utilities, and operations that keep RiseUp open every school day.",
+    icon: School,
+    accent: "#F78C1F",
+  },
+  {
+    id: "outcomes",
+    step: "05",
+    title: "Outcomes published",
+    description: "Attendance, exams, and enrollment updated here — no hidden numbers.",
+    icon: Sparkles,
+    accent: "#0ABFBC",
+  },
+] as const;
+
+export const impactRibbon = [
+  "Transparency",
+  "Enrollment",
+  "Attendance",
+  "Exam results",
+  "Confirmed giving",
+  "Sukkur",
+  "Every rupee counted",
+] as const;

@@ -131,7 +131,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
       {/* Sidebar */}
       <aside className={`sidebar z-50 ${sidebarOpen ? "open" : ""}`}>
         <div className="sidebar__brand">
-          <BrandLogo variant="full" href="/" className="!h-9" />
+          <BrandLogo variant="full" size="sm" href="/" />
         </div>
 
         <nav className="sidebar__nav flex-1 overflow-y-auto" aria-label="Portal navigation">

@@ -1,5 +1,12 @@
-import { Clock, Mail, MapPin, MessageCircle, Phone } from "lucide-react";
+import { Clock, Facebook, Instagram, Mail, MapPin, MessageCircle, Phone } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+
+export const ACADEMY_EMAIL = "riseupprepsofficial@gmail.com";
+export const ACADEMY_PHONE = "+923158934941";
+export const ACADEMY_PHONE_DISPLAY = "+92 315 893 4941";
+export const ACADEMY_WHATSAPP_URL = "https://wa.me/923158934941";
+export const ACADEMY_INSTAGRAM_URL = "https://instagram.com/riseupprepsofficial/";
+export const ACADEMY_FACEBOOK_URL = "https://www.facebook.com/RiseUpPrepsAcademy/";
 
 export const ACADEMY_MAP_EMBED =
   "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d56640.42047147098!2d68.82!3d27.71!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3935f5ff7c6e7b41%3A0xb45e8f2d4a93c7a!2sSukkur%2C%20Sindh%2C%20Pakistan!5e0!3m2!1sen!2s!4v1";
@@ -24,16 +31,16 @@ export const contactChannels: {
     id: "phone",
     icon: Phone,
     title: "Phone",
-    value: "+92 300 123 4567",
-    href: "tel:+923001234567",
+    value: ACADEMY_PHONE_DISPLAY,
+    href: `tel:${ACADEMY_PHONE}`,
     accent: "#4A9EE8",
   },
   {
     id: "email",
     icon: Mail,
     title: "Email",
-    value: "info@riseuppreps.com",
-    href: "mailto:info@riseuppreps.com",
+    value: ACADEMY_EMAIL,
+    href: `mailto:${ACADEMY_EMAIL}`,
     accent: "#4A9EE8",
   },
   {
@@ -41,9 +48,27 @@ export const contactChannels: {
     icon: MessageCircle,
     title: "WhatsApp",
     value: "Chat with our team",
-    href: "https://wa.me/923001234567",
+    href: ACADEMY_WHATSAPP_URL,
     external: true,
     accent: "#0ABFBC",
+  },
+  {
+    id: "instagram",
+    icon: Instagram,
+    title: "Instagram",
+    value: "@riseupprepsofficial",
+    href: ACADEMY_INSTAGRAM_URL,
+    external: true,
+    accent: "#F78C1F",
+  },
+  {
+    id: "facebook",
+    icon: Facebook,
+    title: "Facebook",
+    value: "RiseUp Preps Academy",
+    href: ACADEMY_FACEBOOK_URL,
+    external: true,
+    accent: "#4A9EE8",
   },
   {
     id: "hours",
@@ -53,6 +78,21 @@ export const contactChannels: {
     accent: "#F78C1F",
   },
 ];
+
+export const academySocialLinks = [
+  {
+    id: "instagram",
+    label: "Instagram",
+    href: ACADEMY_INSTAGRAM_URL,
+    icon: Instagram,
+  },
+  {
+    id: "facebook",
+    label: "Facebook",
+    href: ACADEMY_FACEBOOK_URL,
+    icon: Facebook,
+  },
+] as const;
 
 export const contactSubjects = [
   { value: "", label: "Select a topic" },

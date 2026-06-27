@@ -79,7 +79,7 @@ export default function AboutPage() {
       >
         <div className="container-main">
           <motion.div
-            initial="hidden"
+            initial={false}
             whileInView="show"
             viewport={viewport}
             variants={fadeUp}
@@ -115,7 +115,7 @@ export default function AboutPage() {
       >
         <div className="container-main section-centered">
           <motion.div
-            initial="hidden"
+            initial={false}
             whileInView="show"
             viewport={viewport}
             variants={fadeUp}
@@ -133,7 +133,7 @@ export default function AboutPage() {
               {timeline.map((item, i) => (
                 <motion.li
                   key={item.year}
-                  initial="hidden"
+                  initial={false}
                   whileInView="show"
                   viewport={viewport}
                   variants={fadeUp}
@@ -158,7 +158,7 @@ export default function AboutPage() {
       >
         <div className="container-main section-centered">
           <motion.div
-            initial="hidden"
+            initial={false}
             whileInView="show"
             viewport={viewport}
             variants={fadeUp}
@@ -167,7 +167,7 @@ export default function AboutPage() {
             <SectionIntro eyebrow="What guides us" title="Core values" />
           </motion.div>
           <motion.div
-            initial="hidden"
+            initial={false}
             whileInView="show"
             viewport={viewport}
             variants={fadeUp}
@@ -205,7 +205,7 @@ export default function AboutPage() {
         className="about-section section-padding border-b border-white/[0.06] bg-[#0D1B2A]/30 scroll-mt-24"
       >
         <div className="container-main">
-          <motion.div initial="hidden" whileInView="show" viewport={viewport} variants={fadeUp}>
+          <motion.div initial={false} whileInView="show" viewport={viewport} variants={fadeUp}>
             <SectionIntro
               eyebrow="Leadership"
               title="Meet our team"
@@ -222,7 +222,7 @@ export default function AboutPage() {
         className="about-section section-padding border-b border-white/[0.06] bg-[#070B14]/40 scroll-mt-24 overflow-hidden"
       >
         <div className="container-main section-centered">
-          <motion.div initial="hidden" whileInView="show" viewport={viewport} variants={fadeUp}>
+          <motion.div initial={false} whileInView="show" viewport={viewport} variants={fadeUp}>
             <SectionIntro
               eyebrow="On campus"
               title="Learning in Sukkur"
@@ -231,7 +231,7 @@ export default function AboutPage() {
           </motion.div>
         </div>
         <motion.div
-          initial="hidden"
+          initial={false}
           whileInView="show"
           viewport={viewport}
           variants={fadeUp}
@@ -245,7 +245,7 @@ export default function AboutPage() {
       <section id="about-campus" className="about-section section-padding scroll-mt-24">
         <div className="container-main max-w-5xl mx-auto">
           <motion.div
-            initial="hidden"
+            initial={false}
             whileInView="show"
             viewport={viewport}
             variants={fadeUp}

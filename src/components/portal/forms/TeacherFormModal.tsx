@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { X, Loader2, Plus } from "lucide-react";
 import { createTeacher } from "@/app/actions/teacher-actions";
+import { ACADEMY_PHONE_DISPLAY } from "@/data/contact";
 import toast from "react-hot-toast";
 
 export default function TeacherFormModal() {
@@ -66,7 +67,7 @@ export default function TeacherFormModal() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="form-label-caps">Phone</label>
-                    <input type="text" name="phone" placeholder="+92 300 1234567" className="form-input" />
+                    <input type="text" name="phone" placeholder={ACADEMY_PHONE_DISPLAY} className="form-input" />
                   </div>
                   <div>
                     <label className="form-label-caps">Base salary (PKR)</label>
