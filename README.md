@@ -95,6 +95,46 @@ See [`.env.example`](.env.example) for a full template.
 
 ---
 
+## Deploying to Vercel
+
+Vercel cannot run the local embedded Postgres from `npm run db:postgres:start`. You need a **hosted PostgreSQL** database.
+
+### 1. Connect a database
+
+In the [Vercel dashboard](https://vercel.com) → your project → **Storage** → create or link **Postgres** (Neon) or add `DATABASE_URL` manually under **Settings → Environment Variables**.
+
+Vercel typically injects:
+
+| Variable | Use |
+|----------|-----|
+| `POSTGRES_PRISMA_URL` | Pooled connection (app queries) |
+| `POSTGRES_URL_NON_POOLING` | Direct connection (schema push on deploy) |
+| `POSTGRES_URL` | Fallback connection string |
+
+Also set for **Production**:
+
+| Variable | Example |
+|----------|---------|
+| `AUTH_SECRET` | Random string (`openssl rand -base64 32`) |
+| `AUTH_URL` | `https://your-domain.vercel.app` |
+| `NEXTAUTH_URL` | Same as `AUTH_URL` |
+
+### 2. Redeploy
+
+Each deploy runs `prisma db push` automatically (via `vercel-build`) when database env vars are present, so the schema stays in sync.
+
+### 3. Seed production once (empty database only)
+
+```bash
+DATABASE_URL="your-production-postgres-url" npm run db:seed
+```
+
+**Warning:** `db:seed` wipes all existing data. Only run this on a brand-new production database.
+
+Default admin after seed: `admin@riseuppreps.com` / `password123` — change the password after first login.
+
+---
+
 ## Scripts
 
 | Command | Description |

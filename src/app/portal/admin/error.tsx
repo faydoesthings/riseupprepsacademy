@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { AlertCircle, RefreshCw } from "lucide-react";
+import { getDbErrorCopy } from "@/lib/db-environment";
 
 export default function AdminError({
   error,
@@ -26,9 +27,7 @@ export default function AdminError({
         <AlertCircle className="w-10 h-10 text-[#F78C1F] mb-4" aria-hidden />
         <h1 className="portal-error__title">Something went wrong</h1>
         <p className="portal-error__text">
-          {isDb
-            ? "The database is not reachable. Start Postgres with npm run db:postgres:start, then refresh."
-            : "The admin dashboard could not load. Try again or return to the home page."}
+          {isDb ? getDbErrorCopy() : "The admin dashboard could not load. Try again or return to the home page."}
         </p>
         <div className="portal-error__actions">
           <button type="button" onClick={() => reset()} className="portal-btn portal-btn--primary">

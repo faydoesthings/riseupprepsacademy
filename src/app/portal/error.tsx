@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { AlertCircle, RefreshCw } from "lucide-react";
+import { getDbErrorCopy } from "@/lib/db-environment";
 
 export default function PortalError({
   error,
@@ -26,9 +27,7 @@ export default function PortalError({
         <AlertCircle className="w-10 h-10 text-[#F78C1F] mb-4 mx-auto" aria-hidden />
         <h1 className="portal-error__title">Portal unavailable</h1>
         <p className="portal-error__text">
-          {isDb
-            ? "Database is offline. Run npm run db:postgres:start then refresh."
-            : "This portal page could not load. Please try again."}
+          {isDb ? getDbErrorCopy() : "This portal page could not load. Please try again."}
         </p>
         <div className="portal-error__actions">
           <button type="button" onClick={() => reset()} className="portal-btn portal-btn--primary">

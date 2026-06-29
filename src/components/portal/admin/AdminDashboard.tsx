@@ -44,6 +44,8 @@ type Props = {
   recentActivities: AdminActivityItem[];
   chartData: AdminChartData;
   dbUnavailable?: boolean;
+  dbUnavailableTitle?: string;
+  dbUnavailableText?: string;
   lmsStats?: {
     publishedCourses: number;
     activeEnrollments: number;
@@ -60,6 +62,8 @@ export default function AdminDashboard({
   recentActivities,
   chartData,
   dbUnavailable = false,
+  dbUnavailableTitle = "Database offline",
+  dbUnavailableText = "Live stats could not load.",
   lmsStats,
 }: Props) {
   const today = new Date().toLocaleDateString("en-US", {
@@ -75,12 +79,8 @@ export default function AdminDashboard({
         <div className="portal-db-alert" role="status">
           <AlertCircle className="w-5 h-5 shrink-0" aria-hidden />
           <div>
-            <p className="portal-db-alert__title">Database offline</p>
-            <p className="portal-db-alert__text">
-              Live stats could not load. Start Postgres with{" "}
-              <code className="portal-db-alert__code">npm run db:postgres:start</code>, then run{" "}
-              <code className="portal-db-alert__code">npm run db:seed</code> if needed.
-            </p>
+            <p className="portal-db-alert__title">{dbUnavailableTitle}</p>
+            <p className="portal-db-alert__text">{dbUnavailableText}</p>
           </div>
         </div>
       )}

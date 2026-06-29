@@ -1,6 +1,7 @@
 import { getAdminDashboardStats, getAdminChartData, getEmptyAdminChartData, getEmptyAdminDashboardStats } from "@/lib/stats";
 import { getLmsAdminStats } from "@/lib/lms/stats";
 import { requirePortalRole } from "@/lib/portal-auth";
+import { getDbUnavailableCopy } from "@/lib/db-environment";
 import { formatPKR } from "@/lib/format";
 import { formatGradeApplying } from "@/data/admissions";
 import AdminDashboard from "@/components/portal/admin/AdminDashboard";
@@ -83,6 +84,8 @@ export default async function AdminDashboardPage() {
     })),
   ].slice(0, 6);
 
+  const dbCopy = getDbUnavailableCopy();
+
   return (
     <AdminDashboard
       firstName={firstName}
@@ -91,6 +94,8 @@ export default async function AdminDashboardPage() {
       recentActivities={recentActivities}
       chartData={chartData}
       dbUnavailable={dbUnavailable}
+      dbUnavailableTitle={dbCopy.title}
+      dbUnavailableText={dbCopy.text}
       lmsStats={lmsStats}
     />
   );
