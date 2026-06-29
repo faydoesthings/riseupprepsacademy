@@ -187,7 +187,7 @@ export default function RegisterPage() {
 
                   <div className="auth-field">
                     <label className="form-label" htmlFor="register-email">
-                      Email
+                      Email *
                     </label>
                     <div className="auth-input-wrap">
                       <Mail className="auth-input-wrap__icon" aria-hidden />

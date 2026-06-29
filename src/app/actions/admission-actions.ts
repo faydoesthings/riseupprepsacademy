@@ -5,6 +5,12 @@ import { revalidatePath } from "next/cache";
 import { requireAdminAction } from "@/lib/auth-utils";
 import { logAudit } from "@/lib/audit-log";
 import { allGradeOptionValues } from "@/data/admissions";
+import {
+  findClassIdForGrade,
+  generateInitialPassword,
+  hashPassword,
+  resolveUniqueStudentEmail,
+} from "@/lib/provision-user";
 
 export async function submitAdmissionApplication(formData: FormData) {
   try {
@@ -13,12 +19,16 @@ export async function submitAdmissionApplication(formData: FormData) {
     const gradeApplying = (formData.get("gradeApplying") as string)?.trim();
     const parentName = (formData.get("parentName") as string)?.trim();
     const parentPhone = (formData.get("parentPhone") as string)?.trim();
-    const parentEmail = (formData.get("parentEmail") as string)?.trim();
+    const parentEmail = (formData.get("parentEmail") as string)?.trim().toLowerCase();
     const address = (formData.get("address") as string)?.trim();
     const currentSchool = (formData.get("currentSchool") as string)?.trim();
 
-    if (!studentName || !dateOfBirth || !gradeApplying || !parentName || !parentPhone) {
+    if (!studentName || !dateOfBirth || !gradeApplying || !parentName || !parentPhone || !parentEmail) {
       return { success: false, error: "Please fill in all required fields" };
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(parentEmail)) {
+      return { success: false, error: "Please enter a valid email address" };
     }
 
     if (!(allGradeOptionValues as readonly string[]).includes(gradeApplying)) {
@@ -37,7 +47,7 @@ export async function submitAdmissionApplication(formData: FormData) {
         gradeApplying,
         parentName,
         parentPhone,
-        parentEmail: parentEmail || null,
+        parentEmail,
         address: address || null,
         previousSchool: currentSchool || null,
       },
@@ -68,13 +78,84 @@ export async function reviewAdmissionApplication(
   }
 
   try {
-    await prisma.admissionApplication.update({
-      where: { id: applicationId },
-      data: {
-        status,
-        reviewNote: reviewNote?.trim() || null,
-        updatedAt: new Date(),
-      },
+    let newStudentId: string | undefined;
+
+    await prisma.$transaction(async (tx) => {
+      const application = await tx.admissionApplication.findUnique({
+        where: { id: applicationId },
+      });
+
+      if (!application) {
+        throw new Error("Application not found");
+      }
+
+      if (application.status !== "PENDING") {
+        throw new Error("This application has already been reviewed");
+      }
+
+      if (status === "APPROVED") {
+        const email = await resolveUniqueStudentEmail(
+          tx,
+          application.parentEmail,
+          application.studentName,
+          application.id
+        );
+
+        const existingUser = await tx.user.findUnique({ where: { email } });
+        if (existingUser) {
+          const existingStudent = await tx.student.findUnique({
+            where: { userId: existingUser.id },
+          });
+          if (!existingStudent) {
+            await tx.student.create({
+              data: {
+                userId: existingUser.id,
+                classId: await findClassIdForGrade(tx, application.gradeApplying),
+                parentName: application.parentName,
+                parentPhone: application.parentPhone,
+                parentEmail: application.parentEmail,
+                dateOfBirth: application.dateOfBirth,
+                address: application.address,
+                previousSchool: application.previousSchool,
+              },
+            });
+          }
+        } else {
+          const password = generateInitialPassword();
+          const user = await tx.user.create({
+            data: {
+              name: application.studentName,
+              email,
+              phone: application.parentPhone,
+              password: await hashPassword(password),
+              role: "STUDENT",
+            },
+          });
+
+          const student = await tx.student.create({
+            data: {
+              userId: user.id,
+              classId: await findClassIdForGrade(tx, application.gradeApplying),
+              parentName: application.parentName,
+              parentPhone: application.parentPhone,
+              parentEmail: application.parentEmail,
+              dateOfBirth: application.dateOfBirth,
+              address: application.address,
+              previousSchool: application.previousSchool,
+            },
+          });
+          newStudentId = student.id;
+        }
+      }
+
+      await tx.admissionApplication.update({
+        where: { id: applicationId },
+        data: {
+          status,
+          reviewNote: reviewNote?.trim() || null,
+          updatedAt: new Date(),
+        },
+      });
     });
 
     const adminId = authResult.session.user?.id;
@@ -86,9 +167,19 @@ export async function reviewAdmissionApplication(
         recordId: applicationId,
         details: reviewNote?.trim() || undefined,
       });
+      if (newStudentId) {
+        await logAudit({
+          userId: adminId,
+          action: "CREATE",
+          module: "STUDENT",
+          recordId: newStudentId,
+          details: "Provisioned from approved admission application",
+        });
+      }
     }
 
     revalidatePath("/portal/admin/admissions");
+    revalidatePath("/portal/admin/students");
     return { success: true };
   } catch (error: unknown) {
     console.error("reviewAdmissionApplication:", error);

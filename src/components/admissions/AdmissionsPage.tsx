@@ -294,15 +294,16 @@ export default function AdmissionsPage() {
                     </div>
                     <div className="admissions-field">
                       <label className="form-label" htmlFor="parentEmail">
-                        Email
+                        Email *
                       </label>
                       <input
                         id="parentEmail"
                         type="email"
                         name="parentEmail"
+                        required
                         autoComplete="email"
                         className="form-input"
-                        placeholder="Optional"
+                        placeholder="you@example.com"
                         value={formData.parentEmail}
                         onChange={handleChange}
                       />

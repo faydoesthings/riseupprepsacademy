@@ -44,29 +44,43 @@ export default function Pagination({
         Showing {start}–{end} of {total}
       </p>
       <div className="portal-pagination__controls">
-        <Link
-          href={buildHref(basePath, page - 1, searchParams)}
-          className={`portal-btn portal-btn--ghost portal-pagination__btn ${
-            page <= 1 ? "portal-pagination__btn--disabled" : ""
-          }`}
-          aria-disabled={page <= 1}
-        >
-          <ChevronLeft className="w-4 h-4" aria-hidden />
-          Previous
-        </Link>
+        {page <= 1 ? (
+          <span
+            className="portal-btn portal-btn--ghost portal-pagination__btn portal-pagination__btn--disabled"
+            aria-disabled
+          >
+            <ChevronLeft className="w-4 h-4" aria-hidden />
+            Previous
+          </span>
+        ) : (
+          <Link
+            href={buildHref(basePath, page - 1, searchParams)}
+            className="portal-btn portal-btn--ghost portal-pagination__btn"
+          >
+            <ChevronLeft className="w-4 h-4" aria-hidden />
+            Previous
+          </Link>
+        )}
         <span className="portal-pagination__page">
           Page {page} of {pages}
         </span>
-        <Link
-          href={buildHref(basePath, page + 1, searchParams)}
-          className={`portal-btn portal-btn--ghost portal-pagination__btn ${
-            page >= pages ? "portal-pagination__btn--disabled" : ""
-          }`}
-          aria-disabled={page >= pages}
-        >
-          Next
-          <ChevronRight className="w-4 h-4" aria-hidden />
-        </Link>
+        {page >= pages ? (
+          <span
+            className="portal-btn portal-btn--ghost portal-pagination__btn portal-pagination__btn--disabled"
+            aria-disabled
+          >
+            Next
+            <ChevronRight className="w-4 h-4" aria-hidden />
+          </span>
+        ) : (
+          <Link
+            href={buildHref(basePath, page + 1, searchParams)}
+            className="portal-btn portal-btn--ghost portal-pagination__btn"
+          >
+            Next
+            <ChevronRight className="w-4 h-4" aria-hidden />
+          </Link>
+        )}
       </div>
     </nav>
   );

@@ -148,6 +148,20 @@ export function buildPayrollListWhere(search: string): Prisma.PayrollWhereInput 
   };
 }
 
+export function buildRegistrationListWhere(
+  search: string
+): Prisma.RegistrationRequestWhereInput {
+  if (!search) return {};
+  return {
+    OR: [
+      { name: containsInsensitive(search) },
+      { email: containsInsensitive(search) },
+      { phone: containsInsensitive(search) },
+      { roleRequested: containsInsensitive(search) },
+    ],
+  };
+}
+
 export function buildAdmissionListWhere(
   search: string
 ): Prisma.AdmissionApplicationWhereInput {

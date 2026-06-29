@@ -36,6 +36,10 @@ function PageHeaderSearch({
   useEffect(() => {
     const timer = setTimeout(() => {
       const trimmed = value.trim();
+      const currentSearch = searchParams.get(paramName) ?? "";
+      // Only rewrite the URL when the search input changed — not on pagination or other params.
+      if (trimmed === currentSearch) return;
+
       const params = new URLSearchParams(searchParams.toString());
       if (trimmed) {
         params.set(paramName, trimmed);
@@ -45,12 +49,7 @@ function PageHeaderSearch({
       params.delete("page");
       const query = params.toString();
       const next = query ? `${pathname}?${query}` : pathname;
-      const current = searchParams.toString()
-        ? `${pathname}?${searchParams.toString()}`
-        : pathname;
-      if (next !== current) {
-        router.push(next);
-      }
+      router.push(next);
     }, 300);
     return () => clearTimeout(timer);
   }, [value, pathname, router, searchParams, paramName]);

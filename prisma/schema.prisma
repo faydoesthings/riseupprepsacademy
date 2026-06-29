@@ -41,6 +41,14 @@ model User {
   auditLogs     AuditLog[]
   accounts      Account[]
   sessions      Session[]
+  // LMS
+  coursesCreated       Course[]         @relation("CourseCreator")
+  lessonProgress       LessonProgress[] @relation("LessonProgressUser")
+  enrollments          Enrollment[]     @relation("EnrolledUser")
+  quizAttempts         QuizAttempt[]    @relation("QuizAttemptUser")
+  vivaSessionsStudent  VivaSession[]    @relation("VivaStudent")
+  vivaSessionsExaminer VivaSession[]    @relation("VivaExaminer")
+  certificates         Certificate[]    @relation("CertificateUser")
 }
 
 model Account {
@@ -433,4 +441,186 @@ model SystemSetting {
   id    String @id @default(cuid())
   key   String @unique
   value String
+}
+
+// ==================== LMS (Phase 1) ====================
+
+model Course {
+  id                String       @id @default(cuid())
+  title             String
+  slug              String       @unique
+  description       String?
+  thumbnail         String?
+  difficulty        String?      // BEGINNER | INTERMEDIATE | ADVANCED
+  estimatedDuration Int?         // total minutes
+  tags              String[]
+  isPublished       Boolean      @default(false)
+  requiresPayment   Boolean      @default(false)
+  pricePKR          Int?
+  requiresViva      Boolean      @default(false)
+  prerequisites     String[]     // course slugs
+  createdById       String
+  createdBy         User         @relation("CourseCreator", fields: [createdById], references: [id])
+  modules           Module[]
+  enrollments       Enrollment[]
+  quizzes           Quiz[]
+  vivaSessions      VivaSession[]
+  certificates      Certificate[]
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+}
+
+model Module {
+  id          String   @id @default(cuid())
+  courseId    String
+  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  order       Int
+  lessons     Lesson[]
+  quizzes     Quiz[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Lesson {
+  id        String           @id @default(cuid())
+  moduleId  String
+  module    Module           @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  title     String
+  type      String           // VIDEO | PDF | SLIDES | READING | EXTERNAL_LINK | DOWNLOAD | PRACTICE
+  content   String?
+  duration  Int?             // seconds (VIDEO)
+  order     Int
+  isPreview Boolean          @default(false)
+  progress  LessonProgress[]
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+}
+
+model LessonProgress {
+  id         String    @id @default(cuid())
+  lessonId   String
+  lesson     Lesson    @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User      @relation("LessonProgressUser", fields: [userId], references: [id], onDelete: Cascade)
+  started    Boolean   @default(false)
+  completed  Boolean   @default(false)
+  lastViewed DateTime?
+  timeSpent  Int       @default(0)
+  percentage Float     @default(0)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@unique([lessonId, userId])
+}
+
+model Enrollment {
+  id          String    @id @default(cuid())
+  courseId    String
+  course      Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User      @relation("EnrolledUser", fields: [userId], references: [id], onDelete: Cascade)
+  enrolledAt  DateTime  @default(now())
+  type        String    // MANUAL | PAYMENT | COUPON | SCHOLARSHIP | BULK
+  status      String    @default("ACTIVE") // ACTIVE | COMPLETED | DROPPED
+  completedAt DateTime?
+
+  @@unique([courseId, userId])
+}
+
+model Quiz {
+  id                     String        @id @default(cuid())
+  title                  String
+  type                   String        // MODULE_QUIZ | FINAL_EXAM
+  moduleId               String?
+  module                 Module?       @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  courseId               String?
+  course                 Course?       @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  timeLimit              Int?
+  passingScore           Float?
+  maxAttempts            Int?
+  randomizeQuestions     Boolean       @default(false)
+  randomizeOptions       Boolean       @default(false)
+  negativeMarking        Boolean       @default(false)
+  negativePenalty        Float?
+  showResultsImmediately Boolean       @default(true)
+  questions              Question[]
+  attempts               QuizAttempt[]
+  createdAt              DateTime      @default(now())
+  updatedAt              DateTime      @updatedAt
+}
+
+model Question {
+  id            String   @id @default(cuid())
+  quizId        String
+  quiz          Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  text          String
+  type          String   // MCQ | TRUE_FALSE | MULTI_SELECT | SHORT_ANSWER
+  options       Json?
+  correctAnswer Json?
+  marks         Float    @default(1)
+  explanation   String?
+  order         Int
+  createdAt     DateTime @default(now())
+}
+
+model QuizAttempt {
+  id          String    @id @default(cuid())
+  quizId      String
+  quiz        Quiz      @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User      @relation("QuizAttemptUser", fields: [userId], references: [id], onDelete: Cascade)
+  startedAt   DateTime  @default(now())
+  submittedAt DateTime?
+  score       Float?
+  percentage  Float?
+  passed      Boolean?
+  answers     Json?
+  gradedAt    DateTime?
+  gradedById  String?
+  feedback    String?
+  createdAt   DateTime  @default(now())
+}
+
+// ==================== LMS Phase 2 ====================
+
+model VivaSession {
+  id              String    @id @default(cuid())
+  courseId        String
+  course          Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  studentId       String
+  student         User      @relation("VivaStudent", fields: [studentId], references: [id], onDelete: Cascade)
+  examinerId      String?
+  examiner        User?     @relation("VivaExaminer", fields: [examinerId], references: [id], onDelete: SetNull)
+  scheduledAt     DateTime
+  durationMinutes Int       @default(30)
+  meetingLink     String?
+  status          String    @default("SCHEDULED") // SCHEDULED | COMPLETED | CANCELLED | NO_SHOW
+  score           Float?
+  passed          Boolean?
+  notes           String?
+  completedAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  certificate     Certificate?
+
+  @@index([courseId, studentId])
+  @@index([examinerId, scheduledAt])
+}
+
+model Certificate {
+  id                 String       @id @default(cuid())
+  courseId           String
+  course             Course       @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  userId             String
+  user               User         @relation("CertificateUser", fields: [userId], references: [id], onDelete: Cascade)
+  vivaSessionId      String?      @unique
+  vivaSession        VivaSession? @relation(fields: [vivaSessionId], references: [id], onDelete: SetNull)
+  certificateNumber  String       @unique
+  verificationCode   String       @unique
+  issuedAt           DateTime     @default(now())
+  revokedAt          DateTime?
+
+  @@unique([courseId, userId])
 }

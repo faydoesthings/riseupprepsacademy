@@ -4,6 +4,7 @@ import DataTable from "@/components/ui/DataTable";
 import Pagination from "@/components/ui/Pagination";
 import ListPageError from "@/components/ui/ListPageError";
 import StudentFormModal from "@/components/portal/forms/StudentFormModal";
+import StudentStatusButton from "@/components/portal/students/StudentStatusButton";
 import { requirePortalRole } from "@/lib/portal-auth";
 import {
   buildStudentListWhere,
@@ -63,7 +64,7 @@ export default async function StudentsPage({
         />
 
         <DataTable
-          headers={["Student", "Roll No", "Class", "Admission Date", "Status"]}
+          headers={["Student", "Roll No", "Class", "Admission Date", "Status", "Actions"]}
           isEmpty={students.length === 0}
           emptyMessage={
             search
@@ -113,6 +114,13 @@ export default async function StudentsPage({
                   })}
                 </td>
                 <td className="px-6 py-4">{getStatusBadge(student.status)}</td>
+                <td className="px-6 py-4">
+                  <StudentStatusButton
+                    studentId={student.id}
+                    status={student.status}
+                    studentName={student.user.name}
+                  />
+                </td>
               </tr>
             );
           })}

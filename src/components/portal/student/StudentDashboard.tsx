@@ -47,6 +47,11 @@ type Props = {
   feeAmount: string | null;
   pendingAssignments: PendingAssignment[];
   recentResults: ExamResult[];
+  continueLearning?: {
+    courseTitle: string;
+    courseSlug: string;
+    progressPercent: number;
+  } | null;
 };
 
 function periodStatus(startTime: string): "completed" | "active" | "upcoming" {
@@ -72,6 +77,7 @@ export default function StudentDashboard({
   feeAmount,
   pendingAssignments,
   recentResults,
+  continueLearning,
 }: Props) {
   const today = new Date().toLocaleDateString("en-US", {
     weekday: "long",
@@ -132,6 +138,31 @@ export default function StudentDashboard({
           </div>
         )}
       </header>
+
+      {continueLearning && (
+        <section className="portal-panel mb-6 flex flex-wrap items-center justify-between gap-4">
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-semibold uppercase tracking-wider text-[#F78C1F] mb-1">Continue learning</p>
+            <p className="portal-panel__title !text-base">{continueLearning.courseTitle}</p>
+            <div className="mt-3 max-w-xs">
+              <div className="lms-course-card__progress-label">
+                <span>Progress</span>
+                <span>{continueLearning.progressPercent}%</span>
+              </div>
+              <div className="lms-course-card__progress-bar">
+                <div className="lms-course-card__progress-fill" style={{ width: `${continueLearning.progressPercent}%` }} />
+              </div>
+            </div>
+          </div>
+          <Link
+            href={`/portal/student/courses/${continueLearning.courseSlug}`}
+            className="portal-btn portal-btn--primary shrink-0 gap-1.5"
+          >
+            Continue
+            <ArrowRight className="w-4 h-4" aria-hidden />
+          </Link>
+        </section>
+      )}
 
       <section className="portal-stat-grid portal-stat-grid--4" aria-label="Overview">
         {kpiCards.map((card) => {

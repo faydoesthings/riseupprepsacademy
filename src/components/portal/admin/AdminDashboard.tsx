@@ -44,6 +44,13 @@ type Props = {
   recentActivities: AdminActivityItem[];
   chartData: AdminChartData;
   dbUnavailable?: boolean;
+  lmsStats?: {
+    publishedCourses: number;
+    activeEnrollments: number;
+    completedEnrollments: number;
+    certificatesIssued: number;
+    upcomingVivas: number;
+  };
 };
 
 export default function AdminDashboard({
@@ -53,6 +60,7 @@ export default function AdminDashboard({
   recentActivities,
   chartData,
   dbUnavailable = false,
+  lmsStats,
 }: Props) {
   const today = new Date().toLocaleDateString("en-US", {
     weekday: "long",
@@ -118,6 +126,38 @@ export default function AdminDashboard({
           );
         })}
       </section>
+
+      {lmsStats && (
+        <section className="portal-panel mb-6" aria-label="LMS overview">
+          <header className="portal-panel__header portal-panel__header--compact">
+            <div>
+              <h2 className="portal-panel__title">Learning platform</h2>
+              <p className="portal-panel__desc">Self-paced courses, enrollments, and certificates.</p>
+            </div>
+            <Link href="/portal/admin/courses" className="portal-panel__link">
+              Manage courses
+            </Link>
+          </header>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="lms-stat">
+              <p className="lms-stat__value">{lmsStats.publishedCourses}</p>
+              <p className="lms-stat__label">Published courses</p>
+            </div>
+            <div className="lms-stat">
+              <p className="lms-stat__value">{lmsStats.activeEnrollments}</p>
+              <p className="lms-stat__label">Active enrollments</p>
+            </div>
+            <div className="lms-stat">
+              <p className="lms-stat__value">{lmsStats.certificatesIssued}</p>
+              <p className="lms-stat__label">Certificates</p>
+            </div>
+            <div className="lms-stat">
+              <p className="lms-stat__value">{lmsStats.upcomingVivas}</p>
+              <p className="lms-stat__label">Upcoming vivas</p>
+            </div>
+          </div>
+        </section>
+      )}
 
       <div className="admin-dashboard__grid">
         <section className="portal-panel admin-dashboard__activity" aria-labelledby="admin-recent-activity">

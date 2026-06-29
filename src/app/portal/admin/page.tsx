@@ -1,4 +1,5 @@
 import { getAdminDashboardStats, getAdminChartData, getEmptyAdminChartData, getEmptyAdminDashboardStats } from "@/lib/stats";
+import { getLmsAdminStats } from "@/lib/lms/stats";
 import { requirePortalRole } from "@/lib/portal-auth";
 import { formatPKR } from "@/lib/format";
 import { formatGradeApplying } from "@/data/admissions";
@@ -13,9 +14,20 @@ export default async function AdminDashboardPage() {
   let dbUnavailable = false;
   let stats = getEmptyAdminDashboardStats();
   let chartData = getEmptyAdminChartData();
+  let lmsStats = {
+    publishedCourses: 0,
+    activeEnrollments: 0,
+    completedEnrollments: 0,
+    certificatesIssued: 0,
+    upcomingVivas: 0,
+  };
 
   try {
-    [stats, chartData] = await Promise.all([getAdminDashboardStats(), getAdminChartData()]);
+    [stats, chartData, lmsStats] = await Promise.all([
+      getAdminDashboardStats(),
+      getAdminChartData(),
+      getLmsAdminStats(),
+    ]);
   } catch (error) {
     dbUnavailable = true;
     console.error("Admin dashboard data unavailable:", error);
@@ -79,6 +91,7 @@ export default async function AdminDashboardPage() {
       recentActivities={recentActivities}
       chartData={chartData}
       dbUnavailable={dbUnavailable}
+      lmsStats={lmsStats}
     />
   );
 }

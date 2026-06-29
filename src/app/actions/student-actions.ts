@@ -6,6 +6,9 @@ import bcrypt from "bcryptjs";
 import { requireAdminAction, validatePassword } from "@/lib/auth-utils";
 import { logAudit } from "@/lib/audit-log";
 
+const STUDENT_STATUSES = ["ACTIVE", "INACTIVE", "SUSPENDED"] as const;
+type StudentStatus = (typeof STUDENT_STATUSES)[number];
+
 export async function createStudent(formData: FormData) {
   const authResult = await requireAdminAction();
   if (!authResult.ok) {
@@ -85,6 +88,61 @@ export async function createStudent(formData: FormData) {
     return {
       success: false,
       error: error instanceof Error ? error.message : "Failed to create student",
+    };
+  }
+}
+
+export async function setStudentStatus(studentId: string, status: StudentStatus) {
+  const authResult = await requireAdminAction();
+  if (!authResult.ok) {
+    return { success: false, error: authResult.error };
+  }
+
+  if (!studentId || !STUDENT_STATUSES.includes(status)) {
+    return { success: false, error: "Invalid status update" };
+  }
+
+  try {
+    const student = await prisma.student.findUnique({
+      where: { id: studentId },
+      include: { user: { select: { id: true, name: true, email: true } } },
+    });
+
+    if (!student) {
+      return { success: false, error: "Student not found" };
+    }
+
+    const userStatus = status === "ACTIVE" ? "ACTIVE" : "INACTIVE";
+
+    await prisma.$transaction([
+      prisma.student.update({
+        where: { id: studentId },
+        data: { status },
+      }),
+      prisma.user.update({
+        where: { id: student.userId },
+        data: { status: userStatus },
+      }),
+    ]);
+
+    const adminId = authResult.session.user?.id;
+    if (adminId) {
+      await logAudit({
+        userId: adminId,
+        action: status === "ACTIVE" ? "REACTIVATE" : "DEACTIVATE",
+        module: "STUDENT",
+        recordId: studentId,
+        details: `${student.user.name} (${student.user.email}) → ${status}`,
+      });
+    }
+
+    revalidatePath("/portal/admin/students");
+    return { success: true };
+  } catch (error: unknown) {
+    console.error("setStudentStatus:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to update student status",
     };
   }
 }

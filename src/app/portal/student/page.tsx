@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { getStudentDashboardData } from "@/lib/stats";
+import { getStudentContinueLearning } from "@/lib/lms/stats";
 import StudentDashboard from "@/components/portal/student/StudentDashboard";
 import StudentProfileMissing from "@/components/portal/student/StudentProfileMissing";
 import { formatPKR } from "@/lib/format";
@@ -13,6 +14,8 @@ export default async function StudentDashboardPage() {
 
   const data = await getStudentDashboardData(session.user.email);
   if (!data) return <StudentProfileMissing />;
+
+  const continueLearning = await getStudentContinueLearning(data.student.userId);
 
   const { student, periods, attendancePct, avgPct, latestFee, pendingAssignments, recentResults } =
     data;
@@ -33,6 +36,7 @@ export default async function StudentDashboardPage() {
       feeAmount={latestFee ? formatPKR(latestFee.amount) : null}
       pendingAssignments={pendingAssignments}
       recentResults={recentResults}
+      continueLearning={continueLearning}
     />
   );
 }

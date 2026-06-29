@@ -25,7 +25,11 @@ export default function ReviewAdmissionButtons({
     setLoading(next);
     const result = await reviewAdmissionApplication(applicationId, next);
     if (result.success) {
-      toast.success(`Application ${next === "APPROVED" ? "approved" : "rejected"}`);
+      toast.success(
+        next === "APPROVED"
+          ? "Application approved — student enrolled"
+          : "Application rejected"
+      );
       router.refresh();
     } else {
       toast.error(result.error || "Failed to update application");

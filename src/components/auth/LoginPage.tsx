@@ -24,8 +24,8 @@ const DEV_PASSWORD = "password123";
 const DEV_ACCOUNTS = [
   { label: "Admin", email: "admin@riseuppreps.com" },
   { label: "Teacher", email: "fatima@riseuppreps.com" },
-  { label: "Student", email: "student1@riseuppreps.com" },
-  { label: "Donor", email: "hamza@donor.com" },
+  { label: "Student", email: "student@riseuppreps.com" },
+  { label: "Donor", email: "donor@riseuppreps.com" },
   { label: "Accountant", email: "accountant@riseuppreps.com" },
 ] as const;
 
